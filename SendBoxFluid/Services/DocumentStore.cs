@@ -20,6 +20,7 @@ public class DocumentStore
     public ConcurrentBag<JsonObject> GetOrCreateBag(string entity)
         => _entities.GetOrAdd(entity, _ => new ConcurrentBag<JsonObject>());
 
+
     public bool TryGetBag(string entity, out ConcurrentBag<JsonObject> bag)
         => _entities.TryGetValue(entity, out bag!);
 

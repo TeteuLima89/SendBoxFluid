@@ -24,17 +24,16 @@ public class B1sController : ControllerBase
     // POST /b1s/v1/Login
     // =========================
     [HttpPost("v1/Login")]
-    public LoginResponse PostLogin(LoginRequest request)
+    public IActionResult PostLogin()
     {
-        _logger.LogInformation("=== LOGIN === CompanyDB={CompanyDB} UserName={UserName}",
-            request.CompanyDB, request.UserName);
+        _logger.LogInformation("=== LOGIN ===");
 
-        return new LoginResponse
+        return Ok(new
         {
             SessionId = Guid.NewGuid().ToString(),
             SessionTimeout = 30,
             Version = "1000300"
-        };
+        });
     }
 
     // =========================
@@ -53,16 +52,15 @@ public class B1sController : ControllerBase
     // Guarda no store e retorna DocEntry/DocNum (ou JdtNum).
     // ==========================================================
     [HttpPost("v1/{entity}")]
-    public IActionResult PostEntity(string entity, [FromBody] JsonElement body)
+    public async Task<IActionResult> PostEntity(string entity)
     {
         var isJournal = entity.Equals("JournalEntries", StringComparison.OrdinalIgnoreCase);
         var docEntry = isJournal ? _store.NextJdtNum() : _store.NextDocEntry();
 
         _logger.LogInformation("=== POST /b1s/v1/{Entity} === DocEntry={DocEntry}", entity, docEntry);
-        LogBody(body);
 
-        // Guarda no store
-        var doc = SafeParse(body);
+        // Lê body manualmente — aceita qualquer Content-Type
+        var doc = await ReadBodyAsJson();
         doc["DocEntry"] = docEntry;
         doc["DocNum"] = docEntry;
         if (isJournal)
@@ -70,7 +68,6 @@ public class B1sController : ControllerBase
 
         _store.Add(entity, doc);
 
-        // Resposta
         if (isJournal)
         {
             return Created($"/b1s/v1/{entity}({docEntry})", new
@@ -105,10 +102,9 @@ public class B1sController : ControllerBase
     // ==========================================================
     [HttpPatch("v1/{entity}({id})")]
     [HttpPatch("v2/{entity}({id})")]
-    public IActionResult PatchEntity(string entity, int id, [FromBody] JsonElement body)
+    public IActionResult PatchEntity(string entity, int id)
     {
         _logger.LogInformation("=== PATCH /b1s/{Entity}({Id}) ===", entity, id);
-        LogBody(body);
         return NoContent();
     }
 
@@ -235,15 +231,19 @@ public class B1sController : ControllerBase
         return filtered;
     }
 
-    private void LogBody(JsonElement body)
+    private async Task<JsonObject> ReadBodyAsJson()
     {
-        try { _logger.LogInformation("Payload:\n{Body}", body.GetRawText()); }
-        catch { _logger.LogInformation("Payload: (não foi possível logar - encoding)"); }
-    }
-
-    private static JsonObject SafeParse(JsonElement body)
-    {
-        try { return JsonNode.Parse(body.GetRawText())?.AsObject() ?? new JsonObject(); }
-        catch { return new JsonObject(); }
+        try
+        {
+            using var reader = new StreamReader(Request.Body);
+            var raw = await reader.ReadToEndAsync();
+            _logger.LogInformation("Payload:\n{Body}", raw);
+            return JsonNode.Parse(raw)?.AsObject() ?? new JsonObject();
+        }
+        catch
+        {
+            _logger.LogInformation("Payload: (vazio ou não-JSON)");
+            return new JsonObject();
+        }
     }
 }
