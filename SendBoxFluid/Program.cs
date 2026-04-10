@@ -1,4 +1,4 @@
-using System.Text.Json;
+using SendBoxFluid.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,21 +6,16 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "7078";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// Add services to the container.
+// Store em memória — singleton compartilhado entre controllers
+builder.Services.AddSingleton<DocumentStore>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
-builder.Services.AddOpenApi();
 
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 app.UseAuthorization();
 
