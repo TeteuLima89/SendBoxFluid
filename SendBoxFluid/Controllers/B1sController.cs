@@ -289,14 +289,17 @@ public class B1sController : ControllerBase
             ["Incoterms"] = "1"
         };
 
-        // DocumentLines (usado por quase todos os fluxos)
-        doc["DocumentLines"] = new JsonArray
+        // DocumentLines — gera 20 linhas (LineNum 0-19) pra cobrir
+        // qualquer referência de pedidoCompraItem que a NF tenha.
+        // O fluxo faz match por LineNum, então precisa existir.
+        var lines = new JsonArray();
+        for (int i = 0; i < 20; i++)
         {
-            new JsonObject
+            lines.Add(new JsonObject
             {
-                ["LineNum"] = 0,
-                ["ItemCode"] = "SANDBOX_ITEM",
-                ["ItemDescription"] = "Item gerado automaticamente",
+                ["LineNum"] = i,
+                ["ItemCode"] = $"SANDBOX_ITEM_{i}",
+                ["ItemDescription"] = $"Item linha {i}",
                 ["Quantity"] = 1,
                 ["UnitPrice"] = 100,
                 ["Usage"] = 20,
@@ -305,8 +308,9 @@ public class B1sController : ControllerBase
                 ["CFOPCode"] = "3102",
                 ["Weight1"] = 1.0,
                 ["DocEntry"] = docEntry
-            }
-        };
+            });
+        }
+        doc["DocumentLines"] = lines;
 
         // Campos específicos por entidade
         if (entity.Equals("PurchaseInvoices", StringComparison.OrdinalIgnoreCase))
