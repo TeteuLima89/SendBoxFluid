@@ -123,15 +123,28 @@ public class B1sController : ControllerBase
     {
         _logger.LogInformation("=== GET /b1s/v1/{Entity} === $filter={Filter}", entity, filter);
 
-        if (!_store.TryGetBag(entity, out var bag))
+        List<JsonObject> docs = new();
+
+        if (_store.TryGetBag(entity, out var bag))
         {
-            return Ok(new { value = Array.Empty<object>() });
+            docs = bag.ToList();
+            if (!string.IsNullOrEmpty(filter))
+                docs = ApplyFilter(docs, filter);
         }
 
-        var docs = bag.ToList();
-
-        if (!string.IsNullOrEmpty(filter))
-            docs = ApplyFilter(docs, filter);
+        // AUTO-GENERATE: se não encontrou nada, gera um documento fake
+        // baseado na entidade e nos filtros da query.
+        // Assim o QA não precisa fazer seed — qualquer nota funciona.
+        if (docs.Count == 0 && !string.IsNullOrEmpty(filter))
+        {
+            var generated = AutoGenerate(entity, filter);
+            if (generated != null)
+            {
+                _store.Add(entity, generated);
+                docs = new List<JsonObject> { generated };
+                _logger.LogInformation("Auto-generated {Entity} from filter: {Filter}", entity, filter);
+            }
+        }
 
         if (!string.IsNullOrEmpty(orderby))
             docs = ApplyOrderBy(docs, orderby);
@@ -229,6 +242,100 @@ public class B1sController : ControllerBase
                 filtered[field] = value != null ? JsonNode.Parse(value.ToJsonString()) : null;
         }
         return filtered;
+    }
+
+    // ==========================================================
+    // AUTO-GENERATE: gera documento fake quando GET não acha nada.
+    // Extrai valores do $filter pra preencher campos-chave.
+    // O QA não precisa de seed — qualquer nota funciona.
+    // ==========================================================
+    private JsonObject? AutoGenerate(string entity, string filter)
+    {
+        var filterValues = ExtractFilterValues(filter);
+        var docEntry = _store.NextDocEntry();
+
+        // Tenta pegar DocNum do filtro (campo mais comum nos GETs)
+        var docNum = filterValues.GetValueOrDefault("DocNum", docEntry.ToString());
+
+        // Base comum a todas as entidades
+        var doc = new JsonObject
+        {
+            ["DocEntry"] = docEntry,
+            ["DocNum"] = int.TryParse(docNum, out var dn) ? dn : docEntry,
+            ["CardCode"] = "SANDBOX_AUTO",
+            ["CardName"] = "Gerado automaticamente pelo SendBox",
+            ["DocumentStatus"] = "bost_Open",
+            ["CancelStatus"] = "csNo",
+            ["DocCurrency"] = "BRL",
+            ["DocRate"] = 1.0,
+            ["DocDate"] = DateTime.Now.ToString("yyyy-MM-dd"),
+            ["DocDueDate"] = DateTime.Now.AddDays(30).ToString("yyyy-MM-dd"),
+            ["BPL_IDAssignedToInvoice"] = 1,
+            ["OpenForLandedCosts"] = "tYES",
+        };
+
+        // Copia todos os valores do filtro pro documento
+        // ex: $filter=U_ACT_NfeId eq '123' → doc["U_ACT_NfeId"] = "123"
+        foreach (var kv in filterValues)
+        {
+            if (!doc.ContainsKey(kv.Key))
+                doc[kv.Key] = kv.Value;
+        }
+
+        // TaxExtension (usado por PurchaseOrders no fluxo de NF entrada)
+        doc["TaxExtension"] = new JsonObject
+        {
+            ["MainUsage"] = 20,
+            ["Incoterms"] = "1"
+        };
+
+        // DocumentLines (usado por quase todos os fluxos)
+        doc["DocumentLines"] = new JsonArray
+        {
+            new JsonObject
+            {
+                ["LineNum"] = 0,
+                ["ItemCode"] = "SANDBOX_ITEM",
+                ["ItemDescription"] = "Item gerado automaticamente",
+                ["Quantity"] = 1,
+                ["UnitPrice"] = 100,
+                ["Usage"] = 20,
+                ["WarehouseCode"] = "01",
+                ["Currency"] = "BRL",
+                ["CFOPCode"] = "3102",
+                ["Weight1"] = 1.0,
+                ["DocEntry"] = docEntry
+            }
+        };
+
+        // Campos específicos por entidade
+        if (entity.Equals("PurchaseInvoices", StringComparison.OrdinalIgnoreCase))
+        {
+            doc["SequenceCode"] = -2;
+            doc["SequenceSerial"] = 1;
+            doc["SequenceModel"] = "M";
+        }
+        else if (entity.Equals("Orders", StringComparison.OrdinalIgnoreCase))
+        {
+            doc["NumAtCard"] = "";
+            doc["Reference1"] = "";
+            doc["JournalMemo"] = "Auto-generated";
+            doc["PayToCode"] = "";
+            doc["ShippingMethod"] = 1;
+        }
+
+        return doc;
+    }
+
+    private static Dictionary<string, string> ExtractFilterValues(string filter)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var matches = Regex.Matches(filter, @"(\w+)\s+eq\s+'?([^')\s]+)'?");
+        foreach (Match m in matches)
+        {
+            values[m.Groups[1].Value] = m.Groups[2].Value;
+        }
+        return values;
     }
 
     private async Task<JsonObject> ReadBodyAsJson()
