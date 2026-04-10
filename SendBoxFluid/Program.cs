@@ -1,13 +1,15 @@
-using SendBoxFluid.Services;
+using SendBoxFluid.Domain.Interfaces;
+using SendBoxFluid.Domain.Services;
+using SendBoxFluid.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Porta: usa PORT do ambiente (Render) ou 7078 local
 var port = Environment.GetEnvironmentVariable("PORT") ?? "7078";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// Store em memória — singleton compartilhado entre controllers
-builder.Services.AddSingleton<DocumentStore>();
+// DI — Domain
+builder.Services.AddSingleton<IDocumentRepository, InMemoryDocumentRepository>();
+builder.Services.AddSingleton<DocumentGeneratorService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -18,7 +20,5 @@ builder.Services.AddControllers()
 var app = builder.Build();
 
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
