@@ -121,6 +121,15 @@ public class B1sController : ControllerBase
         [FromQuery(Name = "$orderby")] string? orderby,
         [FromQuery(Name = "$top")] int? top)
     {
+        // O Fluid codifica $filter=valor como %24filter%3Dvalor (o = vira %3D).
+        // ASP.NET não reconhece como query param. Parseia da raw query string.
+        if (string.IsNullOrEmpty(filter))
+            filter = ExtractFromRawQuery("$filter") ?? ExtractFromRawQuery("filter");
+        if (string.IsNullOrEmpty(select))
+            select = ExtractFromRawQuery("$select") ?? ExtractFromRawQuery("select");
+        if (string.IsNullOrEmpty(orderby))
+            orderby = ExtractFromRawQuery("$orderby") ?? ExtractFromRawQuery("orderby");
+
         _logger.LogInformation("=== GET /b1s/v1/{Entity} === $filter={Filter}", entity, filter);
 
         List<JsonObject> docs = new();
@@ -340,6 +349,24 @@ public class B1sController : ControllerBase
             values[m.Groups[1].Value] = m.Groups[2].Value;
         }
         return values;
+    }
+
+    /// <summary>
+    /// Extrai parâmetro da raw query string, tratando o caso onde
+    /// o Fluid codifica "=" como "%3D" (ex: ?%24filter%3Dvalor).
+    /// </summary>
+    private string? ExtractFromRawQuery(string paramName)
+    {
+        var raw = Uri.UnescapeDataString(Request.QueryString.Value ?? "");
+        // Procura "paramName=" na string decoded
+        var prefix = paramName + "=";
+        var idx = raw.IndexOf(prefix, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return null;
+
+        var start = idx + prefix.Length;
+        // Valor vai até o próximo & ou fim da string
+        var end = raw.IndexOf('&', start);
+        return end < 0 ? raw[start..] : raw[start..end];
     }
 
     private async Task<JsonObject> ReadBodyAsJson()
