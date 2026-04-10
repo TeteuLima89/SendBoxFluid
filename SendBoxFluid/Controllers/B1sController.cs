@@ -298,11 +298,12 @@ public class B1sController : ControllerBase
             ["Incoterms"] = "1"
         };
 
-        // DocumentLines — gera 20 linhas (LineNum 0-19) pra cobrir
+        // DocumentLines — gera 200 linhas (LineNum 0-199) pra cobrir
         // qualquer referência de pedidoCompraItem que a NF tenha.
         // O fluxo faz match por LineNum, então precisa existir.
+        // 200 linhas = ~30KB, cobre a grande maioria dos pedidos.
         var lines = new JsonArray();
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 200; i++)
         {
             lines.Add(new JsonObject
             {
