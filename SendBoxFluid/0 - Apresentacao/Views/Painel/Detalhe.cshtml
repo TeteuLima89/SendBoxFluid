@@ -1,0 +1,90 @@
+@model SessaoDetalheViewModel
+@{
+    ViewData["Title"] = "Detalhes da Sessao";
+    var classeBadge = Model.Resultado switch
+    {
+        "Sucesso" => "badge-sucesso",
+        "Erro" => "badge-erro",
+        "EmAndamento" => "badge-emandamento",
+        _ => "badge-incompleto"
+    };
+}
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h4 class="mb-2">@Model.TipoAcao</h4>
+                <p class="text-muted small mb-1">Sessao: <code>@Model.CodigoSessao</code></p>
+                <p class="text-muted small mb-1">Inicio: @Model.DataInicio.ToString("dd/MM/yyyy HH:mm:ss")</p>
+                <p class="mb-0">@Model.Mensagem</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <span class="badge @classeBadge fs-6 mb-3">@Model.Resultado</span>
+                <div>
+                    <a href="/painel/sessao/@Model.CodigoSessao/download/relatorio" class="btn btn-success btn-sm">
+                        Baixar Relatorio
+                    </a>
+                    <a href="/painel/sessao/@Model.CodigoSessao/download/payload" class="btn btn-info btn-sm">
+                        Baixar Payload
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ul class="nav nav-tabs" id="abas" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#aba-relatorio" type="button">
+            Relatorio (formato Narwal)
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-requisicoes" type="button">
+            Requisicoes (@Model.Requisicoes.Count)
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content border border-top-0 bg-white p-3 shadow-sm">
+    <div class="tab-pane fade show active" id="aba-relatorio">
+        <p class="text-muted small">JSON exatamente como seria enviado pro Narwal via /api/eventointegracao/v1/retornointegracao</p>
+        <div class="json-box">@Model.JsonRelatorio</div>
+    </div>
+
+    <div class="tab-pane fade" id="aba-requisicoes">
+        <div id="acordeao-requisicoes">
+            @for (var i = 0; i < Model.Requisicoes.Count; i++)
+            {
+                var req = Model.Requisicoes[i];
+                var classeStatus = req.CodigoStatusHttp >= 400 ? "text-danger" : "text-success";
+                <div class="card mb-2">
+                    <div class="card-header" style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#req-@i">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="badge bg-secondary">@req.Metodo</span>
+                                <code class="ms-2">@req.Caminho</code>
+                            </div>
+                            <div>
+                                <span class="@classeStatus">HTTP @req.CodigoStatusHttp</span>
+                                <small class="text-muted ms-3">@req.DataHora.ToString("HH:mm:ss")</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="req-@i" class="collapse">
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(req.CorpoRequisicao))
+                            {
+                                <h6>Corpo da Requisicao</h6>
+                                <div class="json-box mb-3">@req.CorpoRequisicao</div>
+                            }
+                            <h6>Resposta</h6>
+                            <div class="json-box">@req.CorpoResposta</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
