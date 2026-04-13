@@ -44,76 +44,58 @@
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Sessoes de Integracao</h5>
-        <button class="btn btn-outline-danger btn-sm" onclick="resetarSandbox()">Limpar Tudo</button>
+        <div>
+            <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">Atualizar</button>
+            <button class="btn btn-outline-danger btn-sm" onclick="resetarSandbox()">Limpar Tudo</button>
+        </div>
     </div>
-    <div class="card-body p-0">
-        <div id="grid-sessoes"></div>
+    <div class="card-body">
+        <table id="grid-sessoes" class="table table-striped table-hover" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Acao</th>
+                    <th>Resultado</th>
+                    <th>Mensagem</th>
+                    <th>Reqs</th>
+                    <th>Acoes</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sessao in Model)
+                {
+                    var classeBadge = sessao.Resultado switch
+                    {
+                        "Sucesso" => "badge-sucesso",
+                        "Erro" => "badge-erro",
+                        "EmAndamento" => "badge-emandamento",
+                        _ => "badge-incompleto"
+                    };
+                    <tr>
+                        <td>@sessao.DataInicio.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                        <td>@sessao.TipoAcao</td>
+                        <td><span class="badge @classeBadge">@sessao.Resultado</span></td>
+                        <td>@sessao.Mensagem</td>
+                        <td>@sessao.QuantidadeRequisicoes</td>
+                        <td>
+                            <a href="/painel/sessao/@sessao.CodigoSessao" class="btn btn-sm btn-primary">Ver detalhes</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        var dados = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model));
-
         $(function () {
-            $("#grid-sessoes").kendoGrid({
-                dataSource: {
-                    data: dados,
-                    pageSize: 20,
-                    schema: {
-                        model: {
-                            fields: {
-                                DataInicio: { type: "date" },
-                                DataUltimaAtividade: { type: "date" },
-                                QuantidadeRequisicoes: { type: "number" }
-                            }
-                        }
-                    }
-                },
-                pageable: { pageSizes: [10, 20, 50] },
-                sortable: true,
-                filterable: true,
-                columns: [
-                    {
-                        field: "DataInicio",
-                        title: "Data/Hora",
-                        format: "{0:dd/MM/yyyy HH:mm:ss}",
-                        width: 170
-                    },
-                    {
-                        field: "TipoAcao",
-                        title: "Acao",
-                        width: 220
-                    },
-                    {
-                        field: "Resultado",
-                        title: "Resultado",
-                        width: 130,
-                        template: function (item) {
-                            var classe = "badge-incompleto";
-                            if (item.Resultado === "Sucesso") classe = "badge-sucesso";
-                            else if (item.Resultado === "Erro") classe = "badge-erro";
-                            else if (item.Resultado === "EmAndamento") classe = "badge-emandamento";
-                            return '<span class="badge ' + classe + '">' + item.Resultado + '</span>';
-                        }
-                    },
-                    {
-                        field: "Mensagem",
-                        title: "Mensagem"
-                    },
-                    {
-                        field: "QuantidadeRequisicoes",
-                        title: "Reqs",
-                        width: 70
-                    },
-                    {
-                        title: "Acoes",
-                        width: 200,
-                        template: function (item) {
-                            return '<a href="/painel/sessao/' + item.CodigoSessao + '" class="btn btn-sm btn-primary">Ver detalhes</a>';
-                        }
-                    }
-                ]
+            $("#grid-sessoes").DataTable({
+                order: [[0, 'desc']],
+                pageLength: 20,
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/2.1.8/i18n/pt-BR.json'
+                }
             });
         });
 
