@@ -9,5 +9,6 @@ public class SessaoListaViewModel
     public string TipoErp { get; set; } = string.Empty;
     public string Resultado { get; set; } = string.Empty;
     public string Mensagem { get; set; } = string.Empty;
+    public string? IdentificadorNegocio { get; set; }
     public int QuantidadeRequisicoes { get; set; }
 }

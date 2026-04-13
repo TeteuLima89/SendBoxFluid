@@ -164,6 +164,11 @@ public class MiddlewareCapturaRequisicao
             sessao.Resultado = ResultadoIntegracaoEnum.Sucesso;
             sessao.PayloadEnviadoErp = registro.CorpoRequisicao;
             sessao.RespostaErp = registro.CorpoResposta;
+
+            // Extrai identificador de negocio (NfeId, ProcessoId, etc) do payload
+            var identificador = ServicoExtratorIdentificador.Extrair(registro.CorpoRequisicao);
+            if (!string.IsNullOrEmpty(identificador))
+                sessao.IdentificadorNegocio = identificador;
         }
     }
 }

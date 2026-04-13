@@ -4,6 +4,7 @@ using SendBoxFluid.Dominio.Interfaces.Repositorios;
 using SendBoxFluid.Dominio.Servicos;
 using SendBoxFluid.Infraestrutura.Middlewares;
 using SendBoxFluid.Infraestrutura.Repositorios;
+using SendBoxFluid.Infraestrutura.ServicosFundo;
 
 var construtor = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,9 @@ construtor.Services.AddSingleton<ServicoGeradorDocumento>();
 // 2 - Aplicacao (Servicos de orquestracao)
 construtor.Services.AddSingleton<IServicoAplicacaoDocumento, ServicoAplicacaoDocumento>();
 construtor.Services.AddSingleton<IServicoAplicacaoSessao, ServicoAplicacaoSessao>();
+
+// 4 - Infraestrutura (Servicos em fundo)
+construtor.Services.AddHostedService<ServicoMantenedorAtivo>();
 
 construtor.Services.AddControllersWithViews()
     .AddJsonOptions(opcoes =>

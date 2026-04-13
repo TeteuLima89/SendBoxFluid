@@ -18,6 +18,7 @@ public class SessaoIntegracao
     public string Mensagem { get; set; }
     public string? PayloadEnviadoErp { get; set; }
     public string? RespostaErp { get; set; }
+    public string? IdentificadorNegocio { get; set; }
 
     public SessaoIntegracao(string codigoSessao)
     {

@@ -61,6 +61,17 @@ public class SandboxController : ControllerBase
         return Ok(new { mensagem = "Store limpo" });
     }
 
+    /// <summary>
+    /// Endpoint de saude usado pelo auto-ping pra manter o Render free tier acordado.
+    /// </summary>
+    [HttpGet("/saude")]
+    public IActionResult VerificarSaude() => Ok(new
+    {
+        status = "ativo",
+        dataHora = DateTime.UtcNow,
+        sessoes = _servicoAplicacaoSessao.ListarTodas().Count
+    });
+
     [HttpGet("store")]
     public IActionResult ObterEstoque()
     {

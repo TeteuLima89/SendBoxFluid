@@ -29,12 +29,20 @@ public class PainelController : Controller
     {
         var todasSessoes = _servicoAplicacaoSessao.ListarTodas();
 
-        // Filtra por ERP se especificado
+        // Filtra fora as sessoes que so fizeram autenticacao (sao ruido,
+        // nao representam integracao real). Mostra so as que tem POST principal.
+        var sessoesRelevantes = todasSessoes
+            .Where(s => s.Resultado != ResultadoIntegracaoEnum.EmAndamento ||
+                        s.Requisicoes.Any(r =>
+                            r.Metodo.Equals("POST", StringComparison.OrdinalIgnoreCase) &&
+                            !r.Caminho.Contains("/Login", StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
         var sessoesFiltradas = erp.ToLower() switch
         {
-            "sapb1" or "sap-b1" => todasSessoes.Where(s => s.TipoErp == TipoErpEnum.SapB1),
-            "sankhya" => todasSessoes.Where(s => s.TipoErp == TipoErpEnum.Sankhya),
-            _ => todasSessoes
+            "sapb1" or "sap-b1" => sessoesRelevantes.Where(s => s.TipoErp == TipoErpEnum.SapB1),
+            "sankhya" => sessoesRelevantes.Where(s => s.TipoErp == TipoErpEnum.Sankhya),
+            _ => sessoesRelevantes
         };
 
         var modelo = sessoesFiltradas.Select(s => new SessaoListaViewModel
@@ -46,13 +54,14 @@ public class PainelController : Controller
             TipoErp = s.TipoErp.ToString(),
             Resultado = s.Resultado.ToString(),
             Mensagem = s.Mensagem,
+            IdentificadorNegocio = s.IdentificadorNegocio,
             QuantidadeRequisicoes = s.Requisicoes.Count
         }).ToList();
 
         ViewData["ErpAtivo"] = erp.ToLower();
-        ViewData["TotalGeral"] = todasSessoes.Count;
-        ViewData["TotalSapB1"] = todasSessoes.Count(s => s.TipoErp == TipoErpEnum.SapB1);
-        ViewData["TotalSankhya"] = todasSessoes.Count(s => s.TipoErp == TipoErpEnum.Sankhya);
+        ViewData["TotalGeral"] = sessoesRelevantes.Count;
+        ViewData["TotalSapB1"] = sessoesRelevantes.Count(s => s.TipoErp == TipoErpEnum.SapB1);
+        ViewData["TotalSankhya"] = sessoesRelevantes.Count(s => s.TipoErp == TipoErpEnum.Sankhya);
 
         return View(modelo);
     }
