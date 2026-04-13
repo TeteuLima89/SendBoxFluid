@@ -54,29 +54,43 @@
     </div>
 </div>
 
+@{
+    var temDadosNarwal = !string.IsNullOrEmpty(Model.DadosOriginaisNarwal);
+}
 <ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item">
-        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#aba-relatorio">
-            <i class="bi bi-file-earmark-text"></i> Relatorio (formato Narwal)
-        </button>
-    </li>
-    @if (!string.IsNullOrEmpty(Model.DadosOriginaisNarwal))
+    @if (temDadosNarwal)
     {
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-narwal">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#aba-narwal">
                 <i class="bi bi-database"></i> Dados Originais (Narwal)
             </button>
         </li>
     }
     <li class="nav-item">
+        <button class="nav-link @(temDadosNarwal ? "" : "active")" data-bs-toggle="tab" data-bs-target="#aba-relatorio">
+            <i class="bi bi-file-earmark-text"></i> Relatorio (formato Narwal)
+        </button>
+    </li>
+    <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-requisicoes">
-            <i class="bi bi-list-ul"></i> Requisicoes (@Model.Requisicoes.Count)
+            <i class="bi bi-list-ul"></i> Acoes ERP (@Model.Requisicoes.Count)
         </button>
     </li>
 </ul>
 
 <div class="tab-content border border-top-0 bg-white p-4 rounded-bottom">
-    <div class="tab-pane fade show active" id="aba-relatorio">
+    @if (temDadosNarwal)
+    {
+        <div class="tab-pane fade show active" id="aba-narwal">
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle"></i>
+                Dados originais consultados no Narwal (mesmo formato que o passo consulta-xml/processo retorna).
+                Aqui voce ve a fonte que originou o envio ao ERP.
+            </p>
+            <div class="json-box">@Model.DadosOriginaisNarwal</div>
+        </div>
+    }
+    <div class="tab-pane fade @(temDadosNarwal ? "" : "show active")" id="aba-relatorio">
         <p class="text-muted small mb-3">
             <i class="bi bi-info-circle"></i>
             JSON exatamente como seria enviado pro Narwal via /api/eventointegracao/v1/retornointegracao
@@ -84,14 +98,13 @@
         <div class="json-box">@Model.JsonRelatorio</div>
     </div>
 
-    @if (!string.IsNullOrEmpty(Model.DadosOriginaisNarwal))
+    @if (!temDadosNarwal)
     {
-        <div class="tab-pane fade" id="aba-narwal">
-            <p class="text-muted small mb-3">
-                <i class="bi bi-info-circle"></i>
-                Dados originais consultados no Narwal (mesmo formato que o passo consulta-xml/processo retorna)
-            </p>
-            <div class="json-box">@Model.DadosOriginaisNarwal</div>
+        <div class="alert alert-info mt-3 mb-0">
+            <i class="bi bi-info-circle"></i>
+            <strong>Dados do Narwal nao disponiveis.</strong>
+            Configure o acesso em <a href="/painel/configuracao" class="alert-link">Configuracao</a>
+            pra ver os dados originais (consulta-xml) aqui.
         </div>
     }
 

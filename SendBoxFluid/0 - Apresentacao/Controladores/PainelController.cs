@@ -3,7 +3,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using SendBoxFluid.Aplicacao.Interfaces;
 using SendBoxFluid.Apresentacao.ViewModels;
+using SendBoxFluid.Dominio.Entidades;
 using SendBoxFluid.Dominio.Enumeradores;
+using SendBoxFluid.Dominio.Interfaces.Repositorios;
 using SendBoxFluid.Dominio.Servicos;
 
 namespace SendBoxFluid.Apresentacao.Controladores;
@@ -14,10 +16,50 @@ namespace SendBoxFluid.Apresentacao.Controladores;
 public class PainelController : Controller
 {
     private readonly IServicoAplicacaoSessao _servicoAplicacaoSessao;
+    private readonly IRepositorioConfiguracaoNarwal _repositorioConfiguracaoNarwal;
 
-    public PainelController(IServicoAplicacaoSessao servicoAplicacaoSessao)
+    public PainelController(
+        IServicoAplicacaoSessao servicoAplicacaoSessao,
+        IRepositorioConfiguracaoNarwal repositorioConfiguracaoNarwal)
     {
         _servicoAplicacaoSessao = servicoAplicacaoSessao;
+        _repositorioConfiguracaoNarwal = repositorioConfiguracaoNarwal;
+    }
+
+    [HttpGet("/painel/configuracao")]
+    public IActionResult Configuracao()
+    {
+        ViewData["TotalGeral"] = _servicoAplicacaoSessao.ListarTodas().Count;
+        return View(_repositorioConfiguracaoNarwal.ListarTodas());
+    }
+
+    [HttpPost("/painel/configuracao/narwal/salvar")]
+    public IActionResult SalvarConfiguracaoNarwal(string cliente, string urlNarwal, string usuario, string senha)
+    {
+        if (string.IsNullOrWhiteSpace(cliente) || string.IsNullOrWhiteSpace(urlNarwal))
+        {
+            TempData["MensagemErro"] = "Cliente e URL sao obrigatorios";
+            return RedirectToAction(nameof(Configuracao));
+        }
+
+        _repositorioConfiguracaoNarwal.Salvar(new ConfiguracaoNarwal
+        {
+            Cliente = cliente,
+            UrlNarwal = urlNarwal,
+            Usuario = string.IsNullOrWhiteSpace(usuario) ? "integracao" : usuario,
+            Senha = senha ?? string.Empty
+        });
+
+        TempData["MensagemSucesso"] = $"Configuracao salva para {cliente}";
+        return RedirectToAction(nameof(Configuracao));
+    }
+
+    [HttpPost("/painel/configuracao/narwal/remover")]
+    public IActionResult RemoverConfiguracaoNarwal(string cliente)
+    {
+        _repositorioConfiguracaoNarwal.Remover(cliente);
+        TempData["MensagemSucesso"] = $"Configuracao removida: {cliente}";
+        return RedirectToAction(nameof(Configuracao));
     }
 
     [HttpGet("/")]
@@ -86,17 +128,21 @@ public class PainelController : Controller
             DadosOriginaisNarwal = string.IsNullOrEmpty(sessao.DadosOriginaisNarwal)
                 ? null
                 : FormatarJson(sessao.DadosOriginaisNarwal),
-            Requisicoes = sessao.Requisicoes.Select(r => new RequisicaoViewModel
-            {
-                Identificador = r.Identificador,
-                DataHora = r.DataHora,
-                Metodo = r.Metodo,
-                Caminho = r.Caminho,
-                Entidade = r.Entidade,
-                CodigoStatusHttp = r.CodigoStatusHttp,
-                CorpoRequisicao = FormatarJson(r.CorpoRequisicao),
-                CorpoResposta = FormatarJson(r.CorpoResposta)
-            }).ToList(),
+            // Mostra so POSTs e PATCHs (acoes principais), oculta GETs/Login que sao ruido
+            Requisicoes = sessao.Requisicoes
+                .Where(r => !r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
+                            !r.Caminho.Contains("/Login", StringComparison.OrdinalIgnoreCase))
+                .Select(r => new RequisicaoViewModel
+                {
+                    Identificador = r.Identificador,
+                    DataHora = r.DataHora,
+                    Metodo = r.Metodo,
+                    Caminho = r.Caminho,
+                    Entidade = r.Entidade,
+                    CodigoStatusHttp = r.CodigoStatusHttp,
+                    CorpoRequisicao = FormatarJson(r.CorpoRequisicao),
+                    CorpoResposta = FormatarJson(r.CorpoResposta)
+                }).ToList(),
             JsonRelatorio = relatorio == null ? "{}" : FormatarObjeto(relatorio)
         };
 
