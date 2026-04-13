@@ -4,7 +4,6 @@ using SendBoxFluid.Dominio.Entidades;
 using SendBoxFluid.Dominio.Enumeradores;
 using SendBoxFluid.Dominio.Interfaces.Repositorios;
 using SendBoxFluid.Dominio.Servicos;
-using SendBoxFluid.Infraestrutura.ClientesExternos;
 
 namespace SendBoxFluid.Infraestrutura.Middlewares;
 
@@ -29,7 +28,7 @@ public class MiddlewareCapturaRequisicao
         _proximo = proximo;
     }
 
-    public async Task InvokeAsync(HttpContext contexto, IRepositorioSessao repositorioSessao, ClienteNarwal clienteNarwal)
+    public async Task InvokeAsync(HttpContext contexto, IRepositorioSessao repositorioSessao)
     {
         var caminho = contexto.Request.Path.Value ?? "";
         if (!caminho.StartsWith("/b1s", StringComparison.OrdinalIgnoreCase) &&
@@ -55,7 +54,7 @@ public class MiddlewareCapturaRequisicao
             await streamMemoriaResposta.CopyToAsync(streamOriginalResposta);
             contexto.Response.Body = streamOriginalResposta;
 
-            ProcessarRequisicao(contexto, corpoRequisicao, corpoResposta, repositorioSessao, clienteNarwal);
+            ProcessarRequisicao(contexto, corpoRequisicao, corpoResposta, repositorioSessao);
         }
     }
 
@@ -81,8 +80,7 @@ public class MiddlewareCapturaRequisicao
         HttpContext contexto,
         string corpoRequisicao,
         string corpoResposta,
-        IRepositorioSessao repositorioSessao,
-        ClienteNarwal clienteNarwal)
+        IRepositorioSessao repositorioSessao)
     {
         var codigoCookie = ExtrairCodigoCookie(contexto, corpoResposta);
         if (string.IsNullOrEmpty(codigoCookie))
@@ -103,7 +101,7 @@ public class MiddlewareCapturaRequisicao
         if (ehPostPrincipal)
         {
             // Cria NOVA sessao (cada NF/Transito/Reintegracao eh independente)
-            FinalizarComoNovaSessao(codigoCookie, registro, contexto.Request.Path, repositorioSessao, clienteNarwal);
+            FinalizarComoNovaSessao(codigoCookie, registro, contexto.Request.Path, repositorioSessao);
         }
         else
         {
@@ -145,8 +143,7 @@ public class MiddlewareCapturaRequisicao
         string codigoCookie,
         RegistroRequisicao postPrincipal,
         PathString caminho,
-        IRepositorioSessao repositorioSessao,
-        ClienteNarwal clienteNarwal)
+        IRepositorioSessao repositorioSessao)
     {
         // Codigo unico pra essa integracao (nao mais o cookie compartilhado)
         var codigoIntegracao = Guid.NewGuid().ToString();
@@ -188,33 +185,8 @@ public class MiddlewareCapturaRequisicao
                 sessao.IdentificadorNegocio = identificador;
         }
 
-        // Enriquece com dados do Narwal de forma assincrona
-        if (!string.IsNullOrEmpty(sessao.IdentificadorNegocio))
-        {
-            _ = EnriquecerComDadosNarwal(sessao, clienteNarwal);
-        }
-    }
-
-    private static async Task EnriquecerComDadosNarwal(SessaoIntegracao sessao, ClienteNarwal clienteNarwal)
-    {
-        try
-        {
-            string? dados = sessao.TipoAcao switch
-            {
-                TipoAcaoEnum.NotaFiscalEntradaDraft or
-                TipoAcaoEnum.NotaFiscalEntradaRecebimento or
-                TipoAcaoEnum.NotaFiscalTransito or
-                TipoAcaoEnum.NotaFiscalSaida =>
-                    await clienteNarwal.BuscarNotaFiscal(sessao.IdentificadorNegocio!),
-                TipoAcaoEnum.DespesaImportacao =>
-                    await clienteNarwal.BuscarDespesa(sessao.IdentificadorNegocio!),
-                _ => await clienteNarwal.BuscarProcesso(sessao.IdentificadorNegocio!)
-            };
-
-            if (!string.IsNullOrEmpty(dados))
-                sessao.DadosOriginaisNarwal = dados;
-        }
-        catch { }
+        // Persiste a sessao (relevante quando usa Postgres)
+        repositorioSessao.Salvar(sessao);
     }
 
     private static TipoErpEnum IdentificarErp(PathString caminho)

@@ -3,7 +3,6 @@ using SendBoxFluid.Aplicacao.Interfaces;
 using SendBoxFluid.Aplicacao.Servicos;
 using SendBoxFluid.Dominio.Interfaces.Repositorios;
 using SendBoxFluid.Dominio.Servicos;
-using SendBoxFluid.Infraestrutura.ClientesExternos;
 using SendBoxFluid.Infraestrutura.Middlewares;
 using SendBoxFluid.Infraestrutura.Persistencia;
 using SendBoxFluid.Infraestrutura.Repositorios;
@@ -35,7 +34,6 @@ if (!string.IsNullOrEmpty(connectionString))
     // Repositorios persistidos (escopo singleton, mas DbContext via scope factory)
     construtor.Services.AddSingleton<IRepositorioDocumento, RepositorioDocumentoPostgres>();
     construtor.Services.AddSingleton<IRepositorioSessao, RepositorioSessaoPostgres>();
-    construtor.Services.AddSingleton<IRepositorioConfiguracaoNarwal, RepositorioConfiguracaoNarwalPostgres>();
 
     Console.WriteLine("[SendBox] Persistencia: PostgreSQL");
 }
@@ -43,7 +41,6 @@ else
 {
     construtor.Services.AddSingleton<IRepositorioDocumento, RepositorioDocumentoEmMemoria>();
     construtor.Services.AddSingleton<IRepositorioSessao, RepositorioSessaoEmMemoria>();
-    construtor.Services.AddSingleton<IRepositorioConfiguracaoNarwal, RepositorioConfiguracaoNarwalEmMemoria>();
 
     Console.WriteLine("[SendBox] Persistencia: em memoria (defina CONNECTION_STRING_POSTGRES pra usar Postgres)");
 }
@@ -54,9 +51,6 @@ construtor.Services.AddSingleton<ServicoGeradorDocumento>();
 // 2 - Aplicacao (Servicos de orquestracao)
 construtor.Services.AddSingleton<IServicoAplicacaoDocumento, ServicoAplicacaoDocumento>();
 construtor.Services.AddSingleton<IServicoAplicacaoSessao, ServicoAplicacaoSessao>();
-
-// 4 - Infraestrutura (Clientes externos)
-construtor.Services.AddSingleton<ClienteNarwal>();
 
 // 4 - Infraestrutura (Servicos em fundo)
 construtor.Services.AddHostedService<ServicoMantenedorAtivo>();

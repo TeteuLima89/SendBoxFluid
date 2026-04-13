@@ -3,63 +3,18 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using SendBoxFluid.Aplicacao.Interfaces;
 using SendBoxFluid.Apresentacao.ViewModels;
-using SendBoxFluid.Dominio.Entidades;
 using SendBoxFluid.Dominio.Enumeradores;
-using SendBoxFluid.Dominio.Interfaces.Repositorios;
 using SendBoxFluid.Dominio.Servicos;
 
 namespace SendBoxFluid.Apresentacao.Controladores;
 
-/// <summary>
-/// Controlador do painel de visualizacao para o QA.
-/// </summary>
 public class PainelController : Controller
 {
     private readonly IServicoAplicacaoSessao _servicoAplicacaoSessao;
-    private readonly IRepositorioConfiguracaoNarwal _repositorioConfiguracaoNarwal;
 
-    public PainelController(
-        IServicoAplicacaoSessao servicoAplicacaoSessao,
-        IRepositorioConfiguracaoNarwal repositorioConfiguracaoNarwal)
+    public PainelController(IServicoAplicacaoSessao servicoAplicacaoSessao)
     {
         _servicoAplicacaoSessao = servicoAplicacaoSessao;
-        _repositorioConfiguracaoNarwal = repositorioConfiguracaoNarwal;
-    }
-
-    [HttpGet("/painel/configuracao")]
-    public IActionResult Configuracao()
-    {
-        ViewData["TotalGeral"] = _servicoAplicacaoSessao.ListarTodas().Count;
-        return View(_repositorioConfiguracaoNarwal.ListarTodas());
-    }
-
-    [HttpPost("/painel/configuracao/narwal/salvar")]
-    public IActionResult SalvarConfiguracaoNarwal(string cliente, string urlNarwal, string usuario, string senha)
-    {
-        if (string.IsNullOrWhiteSpace(cliente) || string.IsNullOrWhiteSpace(urlNarwal))
-        {
-            TempData["MensagemErro"] = "Cliente e URL sao obrigatorios";
-            return RedirectToAction(nameof(Configuracao));
-        }
-
-        _repositorioConfiguracaoNarwal.Salvar(new ConfiguracaoNarwal
-        {
-            Cliente = cliente,
-            UrlNarwal = urlNarwal,
-            Usuario = string.IsNullOrWhiteSpace(usuario) ? "integracao" : usuario,
-            Senha = senha ?? string.Empty
-        });
-
-        TempData["MensagemSucesso"] = $"Configuracao salva para {cliente}";
-        return RedirectToAction(nameof(Configuracao));
-    }
-
-    [HttpPost("/painel/configuracao/narwal/remover")]
-    public IActionResult RemoverConfiguracaoNarwal(string cliente)
-    {
-        _repositorioConfiguracaoNarwal.Remover(cliente);
-        TempData["MensagemSucesso"] = $"Configuracao removida: {cliente}";
-        return RedirectToAction(nameof(Configuracao));
     }
 
     [HttpGet("/")]
@@ -71,8 +26,6 @@ public class PainelController : Controller
     {
         var todasSessoes = _servicoAplicacaoSessao.ListarTodas();
 
-        // Filtra fora as sessoes que so fizeram autenticacao (sao ruido,
-        // nao representam integracao real). Mostra so as que tem POST principal.
         var sessoesRelevantes = todasSessoes
             .Where(s => s.Resultado != ResultadoIntegracaoEnum.EmAndamento ||
                         s.Requisicoes.Any(r =>
@@ -101,10 +54,7 @@ public class PainelController : Controller
         }).ToList();
 
         ViewData["ErpAtivo"] = erp.ToLower();
-        ViewData["TotalGeral"] = sessoesRelevantes.Count;
-        ViewData["TotalSapB1"] = sessoesRelevantes.Count(s => s.TipoErp == TipoErpEnum.SapB1);
-        ViewData["TotalSankhya"] = sessoesRelevantes.Count(s => s.TipoErp == TipoErpEnum.Sankhya);
-
+        PopularContadoresSidebar(sessoesRelevantes);
         return View(modelo);
     }
 
@@ -125,10 +75,6 @@ public class PainelController : Controller
             Resultado = sessao.Resultado.ToString(),
             Mensagem = sessao.Mensagem,
             IdentificadorNegocio = sessao.IdentificadorNegocio,
-            DadosOriginaisNarwal = string.IsNullOrEmpty(sessao.DadosOriginaisNarwal)
-                ? null
-                : FormatarJson(sessao.DadosOriginaisNarwal),
-            // Mostra todas as requisicoes exceto Login (que e so autenticacao)
             Requisicoes = sessao.Requisicoes
                 .Where(r => !r.Caminho.Contains("/Login", StringComparison.OrdinalIgnoreCase))
                 .Select(r => new RequisicaoViewModel
@@ -142,9 +88,13 @@ public class PainelController : Controller
                     CorpoRequisicao = FormatarJson(r.CorpoRequisicao),
                     CorpoResposta = FormatarJson(r.CorpoResposta)
                 }).ToList(),
-            JsonRelatorio = relatorio == null ? "{}" : FormatarObjeto(relatorio)
+            JsonRelatorio = relatorio == null ? "{}" : FormatarObjeto(relatorio),
+            ResultadoRelatorio = relatorio?.ResultadoIntegracao ?? string.Empty,
+            MensagemRelatorio = relatorio?.Mensagem ?? string.Empty,
+            DataEnvioRelatorio = relatorio?.DataEnvio ?? string.Empty
         };
 
+        PopularContadoresSidebar(_servicoAplicacaoSessao.ListarTodas());
         return View(modelo);
     }
 
@@ -168,6 +118,13 @@ public class PainelController : Controller
         var conteudo = FormatarJson(sessao.PayloadEnviadoErp);
         var bytes = Encoding.UTF8.GetBytes(conteudo);
         return File(bytes, "application/json", $"payload-{codigoSessao[..8]}.json");
+    }
+
+    private void PopularContadoresSidebar(List<Dominio.Entidades.SessaoIntegracao> sessoes)
+    {
+        ViewData["TotalGeral"] = sessoes.Count;
+        ViewData["TotalSapB1"] = sessoes.Count(s => s.TipoErp == TipoErpEnum.SapB1);
+        ViewData["TotalSankhya"] = sessoes.Count(s => s.TipoErp == TipoErpEnum.Sankhya);
     }
 
     private static string FormatarJson(string json) => ServicoFormatadorJson.Formatar(json);

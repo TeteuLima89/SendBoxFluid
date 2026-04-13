@@ -9,9 +9,13 @@ public class SessaoDetalheViewModel
     public string Resultado { get; set; } = string.Empty;
     public string Mensagem { get; set; } = string.Empty;
     public string? IdentificadorNegocio { get; set; }
-    public string? DadosOriginaisNarwal { get; set; }
     public List<RequisicaoViewModel> Requisicoes { get; set; } = new();
+
+    // Campos do RelatorioIntegracao (formato Narwal)
     public string JsonRelatorio { get; set; } = string.Empty;
+    public string ResultadoRelatorio { get; set; } = string.Empty;
+    public string MensagemRelatorio { get; set; } = string.Empty;
+    public string DataEnvioRelatorio { get; set; } = string.Empty;
 }
 
 public class RequisicaoViewModel

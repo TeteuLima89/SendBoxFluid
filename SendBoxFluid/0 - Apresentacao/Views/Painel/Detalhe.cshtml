@@ -8,9 +8,7 @@
         "EmAndamento" => "badge-emandamento",
         _ => "badge-incompleto"
     };
-    var temDadosNarwal = !string.IsNullOrEmpty(Model.DadosOriginaisNarwal);
-    var consultas = Model.Requisicoes.Where(r => r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase)).ToList();
-    var acoes = Model.Requisicoes.Where(r => !r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase)).ToList();
+    var classeRelatorio = Model.ResultadoRelatorio == "Sucesso" ? "badge-sucesso" : "badge-erro";
 }
 
 <div class="cabecalho-pagina">
@@ -46,51 +44,21 @@
 }
 
 <div class="row g-3 mb-3">
-    <!-- COLUNA ESQUERDA: Origem (Narwal) -->
+    <!-- ESQUERDA: Acoes ERP (POSTs/PATCHs principais) -->
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <i class="bi bi-arrow-up-circle text-primary"></i> Origem (Narwal)
+                    <i class="bi bi-arrow-down-circle text-success"></i> Envio ao ERP
                 </h5>
-                <span class="badge badge-erp-sapb1">consulta-xml</span>
+                <span class="badge bg-secondary">@Model.Requisicoes.Count(r => !r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase)) acao(es)</span>
             </div>
             <div class="card-body p-0">
-                @if (temDadosNarwal)
-                {
-                    <p class="text-muted small px-3 pt-3 mb-2">
-                        Dados originais retornados pelo Narwal (mesma resposta do passo consulta-xml do fluxo)
-                    </p>
-                    <div class="json-box" style="border-radius:0 0 6px 6px; max-height:600px;">@Model.DadosOriginaisNarwal</div>
+                @{
+                    var acoes = Model.Requisicoes.Where(r => !r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase)).ToList();
                 }
-                else
-                {
-                    <div class="alert alert-warning m-3 mb-0">
-                        <i class="bi bi-exclamation-triangle"></i>
-                        <strong>Dados Narwal nao configurados.</strong><br />
-                        <a href="/painel/configuracao" class="alert-link">Configure o acesso</a>
-                        para ver aqui os dados originais (NF, processo, despesa).
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-
-    <!-- COLUNA DIREITA: Destino (ERP) -->
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="bi bi-arrow-down-circle text-success"></i> Destino (ERP)
-                </h5>
-                <span class="badge badge-erp-sapb1">@acoes.Count acao(es)</span>
-            </div>
-            <div class="card-body p-0">
                 @if (acoes.Any())
                 {
-                    <p class="text-muted small px-3 pt-3 mb-2">
-                        Payload(s) enviado(s) pro ERP (Drafts, LandedCosts, JournalEntries, etc)
-                    </p>
                     <div class="accordion accordion-flush" id="acordeao-acoes">
                         @for (var i = 0; i < acoes.Count; i++)
                         {
@@ -117,10 +85,10 @@
                                         @if (!string.IsNullOrEmpty(req.CorpoRequisicao))
                                         {
                                             <h6 class="small mb-1"><i class="bi bi-arrow-up"></i> Enviado</h6>
-                                            <div class="json-box mb-2" style="max-height:350px; font-size:12px;">@req.CorpoRequisicao</div>
+                                            <pre class="json-box mb-2"><code class="language-json">@req.CorpoRequisicao</code></pre>
                                         }
                                         <h6 class="small mb-1"><i class="bi bi-arrow-down"></i> Resposta</h6>
-                                        <div class="json-box" style="max-height:200px; font-size:12px;">@req.CorpoResposta</div>
+                                        <pre class="json-box"><code class="language-json">@req.CorpoResposta</code></pre>
                                     </div>
                                 </div>
                             </div>
@@ -134,24 +102,22 @@
             </div>
         </div>
     </div>
-</div>
 
-<!-- Linha de baixo: consultas SAP + Relatorio -->
-<div class="row g-3">
+    <!-- DIREITA: Consultas no ERP (GETs) -->
     <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-white">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
                     <i class="bi bi-search"></i> Consultas no ERP
-                    <span class="badge bg-secondary">@consultas.Count</span>
                 </h5>
+                @{
+                    var consultas = Model.Requisicoes.Where(r => r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase)).ToList();
+                }
+                <span class="badge bg-secondary">@consultas.Count consulta(s)</span>
             </div>
             <div class="card-body p-0">
                 @if (consultas.Any())
                 {
-                    <p class="text-muted small px-3 pt-3 mb-2">
-                        GETs feitos no ERP pra buscar dados (PurchaseOrders, NFs anteriores, etc)
-                    </p>
                     <div class="accordion accordion-flush" id="acordeao-consultas">
                         @for (var i = 0; i < consultas.Count; i++)
                         {
@@ -166,7 +132,7 @@
                                 </h2>
                                 <div id="consulta-@i" class="accordion-collapse collapse" data-bs-parent="#acordeao-consultas">
                                     <div class="accordion-body p-2">
-                                        <div class="json-box" style="max-height:250px; font-size:12px;">@req.CorpoResposta</div>
+                                        <pre class="json-box"><code class="language-json">@req.CorpoResposta</code></pre>
                                     </div>
                                 </div>
                             </div>
@@ -180,20 +146,35 @@
             </div>
         </div>
     </div>
+</div>
 
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">
-                    <i class="bi bi-file-earmark-text"></i> Relatorio (formato Narwal)
-                </h5>
+<!-- Relatorio do evento de integracao -->
+<div class="card">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="bi bi-file-earmark-text"></i> Resultado do Evento de Integracao
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <small class="text-muted d-block">Resultado</small>
+                <span class="badge @classeRelatorio fs-6">@Model.ResultadoRelatorio</span>
             </div>
-            <div class="card-body p-0">
-                <p class="text-muted small px-3 pt-3 mb-2">
-                    JSON exatamente como seria enviado pro Narwal via /api/eventointegracao/v1/retornointegracao
-                </p>
-                <div class="json-box" style="border-radius:0 0 6px 6px; max-height:400px;">@Model.JsonRelatorio</div>
+            <div class="col-md-6">
+                <small class="text-muted d-block">Mensagem</small>
+                <strong>@(string.IsNullOrEmpty(Model.MensagemRelatorio) ? "—" : Model.MensagemRelatorio)</strong>
+            </div>
+            <div class="col-md-3">
+                <small class="text-muted d-block">Data envio</small>
+                <strong>@Model.DataEnvioRelatorio</strong>
             </div>
         </div>
+
+        <h6 class="small text-muted mb-2">
+            <i class="bi bi-code-slash"></i>
+            JSON exato como seria enviado pro Narwal via /api/eventointegracao/v1/retornointegracao
+        </h6>
+        <pre class="json-box"><code class="language-json">@Model.JsonRelatorio</code></pre>
     </div>
 </div>

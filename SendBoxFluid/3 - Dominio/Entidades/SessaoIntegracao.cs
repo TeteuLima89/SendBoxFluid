@@ -20,7 +20,6 @@ public class SessaoIntegracao
     public string? PayloadEnviadoErp { get; set; }
     public string? RespostaErp { get; set; }
     public string? IdentificadorNegocio { get; set; }
-    public string? DadosOriginaisNarwal { get; set; }
 
     // Construtor privado para o EF Core
     private SessaoIntegracao() { }

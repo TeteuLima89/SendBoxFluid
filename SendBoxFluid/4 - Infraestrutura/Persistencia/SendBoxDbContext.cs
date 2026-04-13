@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SendBoxFluid.Dominio.Entidades;
+using SendBoxFluid.Dominio.Enumeradores;
 
 namespace SendBoxFluid.Infraestrutura.Persistencia;
 
@@ -8,7 +9,6 @@ public class SendBoxDbContext : DbContext
     public DbSet<SessaoIntegracao> Sessoes => Set<SessaoIntegracao>();
     public DbSet<RegistroRequisicao> Requisicoes => Set<RegistroRequisicao>();
     public DbSet<DocumentoArmazenado> Documentos => Set<DocumentoArmazenado>();
-    public DbSet<ConfiguracaoNarwal> ConfiguracoesNarwal => Set<ConfiguracaoNarwal>();
     public DbSet<ContadorEntidade> Contadores => Set<ContadorEntidade>();
 
     public SendBoxDbContext(DbContextOptions<SendBoxDbContext> opcoes) : base(opcoes) { }
@@ -25,7 +25,6 @@ public class SendBoxDbContext : DbContext
             e.Property(s => s.PayloadEnviadoErp).HasColumnType("text");
             e.Property(s => s.RespostaErp).HasColumnType("text");
             e.Property(s => s.IdentificadorNegocio).HasMaxLength(200);
-            e.Property(s => s.DadosOriginaisNarwal).HasColumnType("text");
             e.Property(s => s.TipoAcao).HasConversion<int>();
             e.Property(s => s.TipoErp).HasConversion<int>();
             e.Property(s => s.Resultado).HasConversion<int>();
@@ -58,19 +57,6 @@ public class SendBoxDbContext : DbContext
             e.Property(d => d.Entidade).HasMaxLength(100);
             e.Property(d => d.DadosJson).HasColumnType("text");
             e.HasIndex(d => d.Entidade);
-        });
-
-        // ============ ConfiguracaoNarwal ============
-        mb.Entity<ConfiguracaoNarwal>(e =>
-        {
-            e.ToTable("configuracoes_narwal");
-            e.HasKey(c => c.Cliente);
-            e.Property(c => c.Cliente).HasMaxLength(100);
-            e.Property(c => c.UrlNarwal).HasMaxLength(500);
-            e.Property(c => c.Usuario).HasMaxLength(100);
-            e.Property(c => c.Senha).HasMaxLength(500);
-            e.Ignore(c => c.TokenAtual);
-            e.Ignore(c => c.TokenExpiraEm);
         });
 
         // ============ ContadorEntidade ============

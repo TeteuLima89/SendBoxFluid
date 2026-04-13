@@ -2,8 +2,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using SendBoxFluid.Aplicacao.Interfaces;
-using SendBoxFluid.Dominio.Entidades;
-using SendBoxFluid.Dominio.Interfaces.Repositorios;
 
 namespace SendBoxFluid.Apresentacao.Controladores;
 
@@ -13,39 +11,16 @@ public class SandboxController : ControllerBase
 {
     private readonly IServicoAplicacaoDocumento _servicoAplicacaoDocumento;
     private readonly IServicoAplicacaoSessao _servicoAplicacaoSessao;
-    private readonly IRepositorioConfiguracaoNarwal _repositorioConfiguracaoNarwal;
     private readonly ILogger<SandboxController> _registradorEventos;
 
     public SandboxController(
         IServicoAplicacaoDocumento servicoAplicacaoDocumento,
         IServicoAplicacaoSessao servicoAplicacaoSessao,
-        IRepositorioConfiguracaoNarwal repositorioConfiguracaoNarwal,
         ILogger<SandboxController> registradorEventos)
     {
         _servicoAplicacaoDocumento = servicoAplicacaoDocumento;
         _servicoAplicacaoSessao = servicoAplicacaoSessao;
-        _repositorioConfiguracaoNarwal = repositorioConfiguracaoNarwal;
         _registradorEventos = registradorEventos;
-    }
-
-    /// <summary>
-    /// Configura acesso ao Narwal pra enriquecer sessoes com dados originais.
-    /// </summary>
-    [HttpPost("configurar-narwal")]
-    public IActionResult ConfigurarNarwal([FromBody] ConfiguracaoNarwal configuracao)
-    {
-        _repositorioConfiguracaoNarwal.Salvar(configuracao);
-        _registradorEventos.LogInformation("Configuracao Narwal salva: {Cliente} -> {Url}",
-            configuracao.Cliente, configuracao.UrlNarwal);
-        return Ok(new { mensagem = "Configuracao salva", cliente = configuracao.Cliente });
-    }
-
-    [HttpGet("configuracoes-narwal")]
-    public IActionResult ListarConfiguracoesNarwal()
-    {
-        var lista = _repositorioConfiguracaoNarwal.ListarTodas()
-            .Select(c => new { c.Cliente, c.UrlNarwal, c.Usuario });
-        return Ok(lista);
     }
 
     [HttpPost("seed")]
@@ -86,9 +61,6 @@ public class SandboxController : ControllerBase
         return Ok(new { mensagem = "Store limpo" });
     }
 
-    /// <summary>
-    /// Endpoint de saude usado pelo auto-ping pra manter o Render free tier acordado.
-    /// </summary>
     [HttpGet("/saude")]
     public IActionResult VerificarSaude() => Ok(new
     {
