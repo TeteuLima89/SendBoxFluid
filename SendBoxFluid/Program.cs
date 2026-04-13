@@ -2,6 +2,7 @@ using SendBoxFluid.Aplicacao.Interfaces;
 using SendBoxFluid.Aplicacao.Servicos;
 using SendBoxFluid.Dominio.Interfaces.Repositorios;
 using SendBoxFluid.Dominio.Servicos;
+using SendBoxFluid.Infraestrutura.ClientesExternos;
 using SendBoxFluid.Infraestrutura.Middlewares;
 using SendBoxFluid.Infraestrutura.Repositorios;
 using SendBoxFluid.Infraestrutura.ServicosFundo;
@@ -25,6 +26,10 @@ construtor.Services.Configure<Microsoft.AspNetCore.Mvc.Razor.RazorViewEngineOpti
 // 4 - Infraestrutura (Repositorios)
 construtor.Services.AddSingleton<IRepositorioDocumento, RepositorioDocumentoEmMemoria>();
 construtor.Services.AddSingleton<IRepositorioSessao, RepositorioSessaoEmMemoria>();
+construtor.Services.AddSingleton<IRepositorioConfiguracaoNarwal, RepositorioConfiguracaoNarwalEmMemoria>();
+
+// 4 - Infraestrutura (Clientes externos)
+construtor.Services.AddSingleton<ClienteNarwal>();
 
 // 3 - Dominio (Servicos)
 construtor.Services.AddSingleton<ServicoGeradorDocumento>();

@@ -1,3 +1,5 @@
+using SendBoxFluid.Dominio.Servicos;
+
 namespace SendBoxFluid.Dominio.Entidades;
 
 /// <summary>
@@ -26,7 +28,7 @@ public class RegistroRequisicao
         string? entidade)
     {
         Identificador = Guid.NewGuid();
-        DataHora = DateTime.Now;
+        DataHora = ServicoFusoHorario.AgoraBrasilia();
         Metodo = metodo;
         Caminho = caminho;
         CodigoSessao = codigoSessao;

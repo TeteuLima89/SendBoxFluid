@@ -82,6 +82,10 @@ public class PainelController : Controller
             TipoAcao = ServicoIdentificadorAcao.ObterDescricao(sessao.TipoAcao),
             Resultado = sessao.Resultado.ToString(),
             Mensagem = sessao.Mensagem,
+            IdentificadorNegocio = sessao.IdentificadorNegocio,
+            DadosOriginaisNarwal = string.IsNullOrEmpty(sessao.DadosOriginaisNarwal)
+                ? null
+                : FormatarJson(sessao.DadosOriginaisNarwal),
             Requisicoes = sessao.Requisicoes.Select(r => new RequisicaoViewModel
             {
                 Identificador = r.Identificador,

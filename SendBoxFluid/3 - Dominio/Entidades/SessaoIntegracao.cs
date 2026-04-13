@@ -1,4 +1,5 @@
 using SendBoxFluid.Dominio.Enumeradores;
+using SendBoxFluid.Dominio.Servicos;
 
 namespace SendBoxFluid.Dominio.Entidades;
 
@@ -19,12 +20,13 @@ public class SessaoIntegracao
     public string? PayloadEnviadoErp { get; set; }
     public string? RespostaErp { get; set; }
     public string? IdentificadorNegocio { get; set; }
+    public string? DadosOriginaisNarwal { get; set; }
 
     public SessaoIntegracao(string codigoSessao)
     {
         CodigoSessao = codigoSessao;
-        DataInicio = DateTime.Now;
-        DataUltimaAtividade = DateTime.Now;
+        DataInicio = ServicoFusoHorario.AgoraBrasilia();
+        DataUltimaAtividade = DataInicio;
         Requisicoes = new List<RegistroRequisicao>();
         TipoAcao = TipoAcaoEnum.Login;
         TipoErp = TipoErpEnum.Desconhecido;
@@ -35,6 +37,6 @@ public class SessaoIntegracao
     public void AdicionarRequisicao(RegistroRequisicao requisicao)
     {
         Requisicoes.Add(requisicao);
-        DataUltimaAtividade = DateTime.Now;
+        DataUltimaAtividade = ServicoFusoHorario.AgoraBrasilia();
     }
 }

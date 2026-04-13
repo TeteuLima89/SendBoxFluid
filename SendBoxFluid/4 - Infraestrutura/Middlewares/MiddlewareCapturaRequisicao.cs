@@ -3,6 +3,7 @@ using SendBoxFluid.Dominio.Entidades;
 using SendBoxFluid.Dominio.Enumeradores;
 using SendBoxFluid.Dominio.Interfaces.Repositorios;
 using SendBoxFluid.Dominio.Servicos;
+using SendBoxFluid.Infraestrutura.ClientesExternos;
 
 namespace SendBoxFluid.Infraestrutura.Middlewares;
 
@@ -19,7 +20,7 @@ public class MiddlewareCapturaRequisicao
         _proximo = proximo;
     }
 
-    public async Task InvokeAsync(HttpContext contexto, IRepositorioSessao repositorioSessao)
+    public async Task InvokeAsync(HttpContext contexto, IRepositorioSessao repositorioSessao, ClienteNarwal clienteNarwal)
     {
         // Intercepta rotas dos ERPs (SAP B1, Sankhya)
         var caminho = contexto.Request.Path.Value ?? "";
@@ -46,7 +47,7 @@ public class MiddlewareCapturaRequisicao
             await streamMemoriaResposta.CopyToAsync(streamOriginalResposta);
             contexto.Response.Body = streamOriginalResposta;
 
-            RegistrarSessao(contexto, corpoRequisicao, corpoResposta, repositorioSessao);
+            RegistrarSessao(contexto, corpoRequisicao, corpoResposta, repositorioSessao, clienteNarwal);
         }
     }
 
@@ -72,7 +73,8 @@ public class MiddlewareCapturaRequisicao
         HttpContext contexto,
         string corpoRequisicao,
         string corpoResposta,
-        IRepositorioSessao repositorioSessao)
+        IRepositorioSessao repositorioSessao,
+        ClienteNarwal clienteNarwal)
     {
         var codigoSessao = ExtrairCodigoSessao(contexto, corpoResposta);
         if (string.IsNullOrEmpty(codigoSessao))
@@ -93,6 +95,38 @@ public class MiddlewareCapturaRequisicao
         sessao.TipoErp = IdentificarErp(contexto.Request.Path);
 
         AtualizarTipoEResultadoSessao(sessao, registro);
+
+        // Enriquece com dados do Narwal de forma assincrona (nao bloqueia)
+        if (!string.IsNullOrEmpty(sessao.IdentificadorNegocio) &&
+            string.IsNullOrEmpty(sessao.DadosOriginaisNarwal))
+        {
+            _ = EnriquecerComDadosNarwal(sessao, clienteNarwal);
+        }
+    }
+
+    private static async Task EnriquecerComDadosNarwal(SessaoIntegracao sessao, ClienteNarwal clienteNarwal)
+    {
+        try
+        {
+            string? dados = sessao.TipoAcao switch
+            {
+                TipoAcaoEnum.NotaFiscalEntradaDraft or
+                TipoAcaoEnum.NotaFiscalEntradaRecebimento or
+                TipoAcaoEnum.NotaFiscalTransito or
+                TipoAcaoEnum.NotaFiscalSaida =>
+                    await clienteNarwal.BuscarNotaFiscal(sessao.IdentificadorNegocio!),
+                TipoAcaoEnum.DespesaImportacao =>
+                    await clienteNarwal.BuscarDespesa(sessao.IdentificadorNegocio!),
+                _ => await clienteNarwal.BuscarProcesso(sessao.IdentificadorNegocio!)
+            };
+
+            if (!string.IsNullOrEmpty(dados))
+                sessao.DadosOriginaisNarwal = dados;
+        }
+        catch
+        {
+            // Falha ao enriquecer nao quebra o fluxo
+        }
     }
 
     private static TipoErpEnum IdentificarErp(PathString caminho)

@@ -60,6 +60,14 @@
             <i class="bi bi-file-earmark-text"></i> Relatorio (formato Narwal)
         </button>
     </li>
+    @if (!string.IsNullOrEmpty(Model.DadosOriginaisNarwal))
+    {
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-narwal">
+                <i class="bi bi-database"></i> Dados Originais (Narwal)
+            </button>
+        </li>
+    }
     <li class="nav-item">
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-requisicoes">
             <i class="bi bi-list-ul"></i> Requisicoes (@Model.Requisicoes.Count)
@@ -75,6 +83,17 @@
         </p>
         <div class="json-box">@Model.JsonRelatorio</div>
     </div>
+
+    @if (!string.IsNullOrEmpty(Model.DadosOriginaisNarwal))
+    {
+        <div class="tab-pane fade" id="aba-narwal">
+            <p class="text-muted small mb-3">
+                <i class="bi bi-info-circle"></i>
+                Dados originais consultados no Narwal (mesmo formato que o passo consulta-xml/processo retorna)
+            </p>
+            <div class="json-box">@Model.DadosOriginaisNarwal</div>
+        </div>
+    }
 
     <div class="tab-pane fade" id="aba-requisicoes">
         <div class="accordion" id="acordeao-reqs">

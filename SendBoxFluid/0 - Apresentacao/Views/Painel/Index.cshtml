@@ -79,14 +79,14 @@
             <table id="grid-sessoes" class="table table-hover" style="width:100%">
                 <thead>
                     <tr>
-                        <th>Data/Hora</th>
-                        <th>ERP</th>
+                        <th style="width:130px">Data/Hora</th>
+                        <th style="width:90px">ERP</th>
                         <th>Acao</th>
-                        <th>Identificador</th>
-                        <th>Resultado</th>
+                        <th style="width:160px">Identificador</th>
+                        <th style="width:120px">Resultado</th>
                         <th>Mensagem</th>
-                        <th class="text-center">Reqs</th>
-                        <th></th>
+                        <th class="text-center" style="width:60px">Reqs</th>
+                        <th style="width:120px"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -118,7 +118,9 @@
                             <td>
                                 @if (!string.IsNullOrEmpty(sessao.IdentificadorNegocio))
                                 {
-                                    <code class="text-primary">@sessao.IdentificadorNegocio</code>
+                                    <span class="badge-identificador" title="@sessao.IdentificadorNegocio">
+                                        <i class="bi bi-tag"></i> @sessao.IdentificadorNegocio
+                                    </span>
                                 }
                                 else
                                 {
@@ -126,7 +128,7 @@
                                 }
                             </td>
                             <td><span class="badge @classeBadge">@sessao.Resultado</span></td>
-                            <td><small class="text-muted">@sessao.Mensagem</small></td>
+                            <td><small class="text-muted text-truncate d-inline-block" style="max-width:300px;" title="@sessao.Mensagem">@sessao.Mensagem</small></td>
                             <td class="text-center"><span class="badge badge-incompleto">@sessao.QuantidadeRequisicoes</span></td>
                             <td class="text-end">
                                 <a href="/painel/sessao/@sessao.CodigoSessao" class="btn btn-sm btn-primary">

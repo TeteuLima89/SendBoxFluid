@@ -8,6 +8,8 @@ public class SessaoDetalheViewModel
     public string TipoAcao { get; set; } = string.Empty;
     public string Resultado { get; set; } = string.Empty;
     public string Mensagem { get; set; } = string.Empty;
+    public string? IdentificadorNegocio { get; set; }
+    public string? DadosOriginaisNarwal { get; set; }
     public List<RequisicaoViewModel> Requisicoes { get; set; } = new();
     public string JsonRelatorio { get; set; } = string.Empty;
 }
