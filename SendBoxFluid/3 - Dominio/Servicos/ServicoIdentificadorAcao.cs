@@ -65,7 +65,7 @@ public static class ServicoIdentificadorAcao
     public static string ObterDescricao(TipoAcaoEnum tipo) => tipo switch
     {
         TipoAcaoEnum.Login => "Autenticacao SAP",
-        TipoAcaoEnum.NotaFiscalEntradaDraft => "Nota Fiscal Entrada (Draft)",
+        TipoAcaoEnum.NotaFiscalEntradaDraft => "Nota Fiscal Entrada (Draft/Transito)",
         TipoAcaoEnum.NotaFiscalEntradaRecebimento => "Nota Fiscal Entrada (Recebimento)",
         TipoAcaoEnum.NotaFiscalSaida => "Nota Fiscal Saida",
         TipoAcaoEnum.NotaFiscalTransito => "Nota Fiscal de Transito",
