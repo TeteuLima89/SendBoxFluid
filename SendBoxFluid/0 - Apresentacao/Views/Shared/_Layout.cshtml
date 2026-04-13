@@ -1,5 +1,9 @@
 @{
     var titulo = ViewData["Title"] as string ?? "SendBox Fluid";
+    var erpAtivo = ViewData["ErpAtivo"] as string ?? "";
+    var totalGeral = ViewData["TotalGeral"] as int? ?? 0;
+    var totalSapB1 = ViewData["TotalSapB1"] as int? ?? 0;
+    var totalSankhya = ViewData["TotalSankhya"] as int? ?? 0;
 }
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -9,51 +13,198 @@
     <title>@titulo - SendBox Fluid</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.2.0/css/buttons.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
 
     <style>
-        body { background-color: #f5f5f5; }
-        .navbar-brand { font-weight: 600; }
-        .badge-sucesso { background-color: #28a745; color: white; }
-        .badge-erro { background-color: #dc3545; color: white; }
-        .badge-emandamento { background-color: #ffc107; color: #333; }
-        .badge-incompleto { background-color: #6c757d; color: white; }
-        .json-box {
-            background-color: #1e1e1e;
-            color: #d4d4d4;
-            padding: 16px;
-            border-radius: 6px;
-            font-family: 'Consolas', monospace;
-            font-size: 13px;
-            max-height: 500px;
-            overflow: auto;
-            white-space: pre-wrap;
+        :root {
+            --cor-primaria: #4f46e5;
+            --cor-primaria-clara: #6366f1;
+            --cor-sucesso: #10b981;
+            --cor-erro: #ef4444;
+            --cor-aviso: #f59e0b;
+            --cor-cinza: #6b7280;
+            --cor-fundo: #f9fafb;
+            --cor-borda: #e5e7eb;
+            --largura-sidebar: 250px;
         }
-        .header-painel {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        body {
+            background-color: var(--cor-fundo);
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: var(--largura-sidebar);
+            background: #111827;
+            color: #d1d5db;
             padding: 24px 0;
-            margin-bottom: 24px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        .sidebar-marca {
+            padding: 0 24px 24px;
+            border-bottom: 1px solid #1f2937;
+            margin-bottom: 16px;
+        }
+        .sidebar-marca h4 {
+            color: white; font-weight: 700; margin: 0; font-size: 18px;
+        }
+        .sidebar-marca small {
+            color: #9ca3af; font-size: 12px;
+        }
+        .sidebar-secao {
+            color: #6b7280; font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            padding: 16px 24px 8px;
+        }
+        .sidebar-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 24px;
+            color: #d1d5db; text-decoration: none;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-item:hover {
+            background: #1f2937; color: white;
+        }
+        .sidebar-item.ativo {
+            background: #1f2937; color: white;
+            border-left-color: var(--cor-primaria-clara);
+        }
+        .sidebar-item i { margin-right: 12px; font-size: 16px; }
+        .sidebar-item .badge {
+            background: #374151; color: #d1d5db;
+            font-size: 11px; font-weight: 500;
+            padding: 3px 8px; border-radius: 10px;
+        }
+        .sidebar-item.ativo .badge {
+            background: var(--cor-primaria); color: white;
+        }
+
+        /* Conteudo principal */
+        .conteudo-principal {
+            margin-left: var(--largura-sidebar);
+            padding: 32px;
+            min-height: 100vh;
+        }
+
+        /* Cabecalho da pagina */
+        .cabecalho-pagina {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 32px;
+        }
+        .cabecalho-pagina h1 {
+            font-size: 24px; font-weight: 700; margin: 0; color: #111827;
+        }
+        .cabecalho-pagina p {
+            color: var(--cor-cinza); margin: 4px 0 0; font-size: 14px;
+        }
+
+        /* Cards */
+        .card { border: 1px solid var(--cor-borda); border-radius: 8px; }
+        .card-estatistica {
+            background: white; padding: 20px;
+            border: 1px solid var(--cor-borda); border-radius: 8px;
+        }
+        .card-estatistica .rotulo {
+            color: var(--cor-cinza); font-size: 13px; font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .card-estatistica .valor {
+            font-size: 32px; font-weight: 700; color: #111827;
+        }
+        .card-estatistica.sucesso .valor { color: var(--cor-sucesso); }
+        .card-estatistica.erro .valor { color: var(--cor-erro); }
+        .card-estatistica.aviso .valor { color: var(--cor-aviso); }
+
+        /* Badges */
+        .badge { font-weight: 500; padding: 4px 10px; border-radius: 12px; font-size: 11px; }
+        .badge-sucesso { background: #d1fae5; color: #065f46; }
+        .badge-erro { background: #fee2e2; color: #991b1b; }
+        .badge-emandamento { background: #fef3c7; color: #92400e; }
+        .badge-incompleto { background: #f3f4f6; color: #374151; }
+        .badge-erp-sapb1 { background: #dbeafe; color: #1e40af; }
+        .badge-erp-sankhya { background: #fce7f3; color: #9f1239; }
+
+        /* Tabela */
+        table.dataTable thead th {
+            background: #f9fafb; font-weight: 600; font-size: 13px;
+            text-transform: uppercase; letter-spacing: 0.5px; color: var(--cor-cinza);
+        }
+        table.dataTable tbody td { font-size: 14px; vertical-align: middle; }
+
+        /* Botoes */
+        .btn-primary {
+            background: var(--cor-primaria); border-color: var(--cor-primaria);
+        }
+        .btn-primary:hover {
+            background: var(--cor-primaria-clara); border-color: var(--cor-primaria-clara);
+        }
+
+        /* JSON box */
+        .json-box {
+            background: #0f172a; color: #cbd5e1;
+            padding: 16px; border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px; max-height: 500px; overflow: auto;
+            white-space: pre-wrap; word-wrap: break-word;
         }
     </style>
 </head>
 <body>
-    <div class="header-painel">
-        <div class="container">
-            <h2 class="mb-0">SendBox Fluid <small class="opacity-75">— painel do QA</small></h2>
-            <a href="/painel" class="text-white text-decoration-none small">Voltar para listagem</a>
+    <aside class="sidebar">
+        <div class="sidebar-marca">
+            <h4><i class="bi bi-box-seam"></i> SendBox Fluid</h4>
+            <small>Sandbox de testes — QA</small>
         </div>
-    </div>
 
-    <div class="container">
+        <div class="sidebar-secao">Visualizar</div>
+        <a href="/painel/todos" class="sidebar-item @(erpAtivo == "todos" || string.IsNullOrEmpty(erpAtivo) ? "ativo" : "")">
+            <span><i class="bi bi-grid-1x2"></i> Todas as Sessoes</span>
+            <span class="badge">@totalGeral</span>
+        </a>
+
+        <div class="sidebar-secao">ERPs</div>
+        <a href="/painel/sapb1" class="sidebar-item @(erpAtivo == "sapb1" ? "ativo" : "")">
+            <span><i class="bi bi-database"></i> SAP Business One</span>
+            <span class="badge">@totalSapB1</span>
+        </a>
+        <a href="/painel/sankhya" class="sidebar-item @(erpAtivo == "sankhya" ? "ativo" : "")">
+            <span><i class="bi bi-database"></i> Sankhya</span>
+            <span class="badge">@totalSankhya</span>
+        </a>
+
+        <div class="sidebar-secao">Ferramentas</div>
+        <a href="/sandbox/store" target="_blank" class="sidebar-item">
+            <span><i class="bi bi-archive"></i> Armazem</span>
+        </a>
+        <a href="#" onclick="resetarTudo();return false;" class="sidebar-item">
+            <span><i class="bi bi-trash"></i> Limpar Tudo</span>
+        </a>
+    </aside>
+
+    <main class="conteudo-principal">
         @RenderBody()
-    </div>
+    </main>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        function resetarTudo() {
+            if (!confirm("Limpar TODAS as sessoes e documentos?")) return;
+            fetch('/sandbox/reset', { method: 'DELETE' })
+                .then(function () { location.href = '/painel/todos'; });
+        }
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

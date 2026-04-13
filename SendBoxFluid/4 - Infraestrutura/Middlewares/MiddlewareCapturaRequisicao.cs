@@ -21,8 +21,11 @@ public class MiddlewareCapturaRequisicao
 
     public async Task InvokeAsync(HttpContext contexto, IRepositorioSessao repositorioSessao)
     {
-        // So intercepta rotas /b1s
-        if (!contexto.Request.Path.StartsWithSegments("/b1s"))
+        // Intercepta rotas dos ERPs (SAP B1, Sankhya)
+        var caminho = contexto.Request.Path.Value ?? "";
+        if (!caminho.StartsWith("/b1s", StringComparison.OrdinalIgnoreCase) &&
+            !caminho.StartsWith("/mge", StringComparison.OrdinalIgnoreCase) &&
+            !caminho.StartsWith("/sankhya", StringComparison.OrdinalIgnoreCase))
         {
             await _proximo(contexto);
             return;
@@ -87,8 +90,20 @@ public class MiddlewareCapturaRequisicao
 
         var sessao = repositorioSessao.ObterOuCriar(codigoSessao);
         sessao.AdicionarRequisicao(registro);
+        sessao.TipoErp = IdentificarErp(contexto.Request.Path);
 
         AtualizarTipoEResultadoSessao(sessao, registro);
+    }
+
+    private static TipoErpEnum IdentificarErp(PathString caminho)
+    {
+        var path = caminho.Value ?? "";
+        if (path.StartsWith("/b1s", StringComparison.OrdinalIgnoreCase))
+            return TipoErpEnum.SapB1;
+        if (path.StartsWith("/mge", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/sankhya", StringComparison.OrdinalIgnoreCase))
+            return TipoErpEnum.Sankhya;
+        return TipoErpEnum.Desconhecido;
     }
 
     private static string? ExtrairCodigoSessao(HttpContext contexto, string corpoResposta)

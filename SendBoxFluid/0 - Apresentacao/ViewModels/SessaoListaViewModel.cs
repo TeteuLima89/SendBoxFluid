@@ -6,6 +6,7 @@ public class SessaoListaViewModel
     public DateTime DataInicio { get; set; }
     public DateTime DataUltimaAtividade { get; set; }
     public string TipoAcao { get; set; } = string.Empty;
+    public string TipoErp { get; set; } = string.Empty;
     public string Resultado { get; set; } = string.Empty;
     public string Mensagem { get; set; } = string.Empty;
     public int QuantidadeRequisicoes { get; set; }

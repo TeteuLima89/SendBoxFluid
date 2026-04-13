@@ -1,108 +1,145 @@
 @model List<SessaoListaViewModel>
 @{
-    ViewData["Title"] = "Registro de Integracoes";
+    var erpAtivo = ViewData["ErpAtivo"] as string ?? "todos";
+    var titulosErp = new Dictionary<string, string>
+    {
+        ["todos"] = "Todas as Sessoes",
+        ["sapb1"] = "SAP Business One",
+        ["sankhya"] = "Sankhya"
+    };
+    var subtitulosErp = new Dictionary<string, string>
+    {
+        ["todos"] = "Todas as integracoes capturadas pelo SendBox",
+        ["sapb1"] = "Integracoes via Service Layer SAP B1 (/b1s/v1/*)",
+        ["sankhya"] = "Integracoes via Sankhya (/mge/service.sbr)"
+    };
+    var titulo = titulosErp.GetValueOrDefault(erpAtivo, "Sessoes");
+    var subtitulo = subtitulosErp.GetValueOrDefault(erpAtivo, "");
+    ViewData["Title"] = titulo;
+
     var quantidadeSucesso = Model.Count(s => s.Resultado == "Sucesso");
     var quantidadeErro = Model.Count(s => s.Resultado == "Erro");
     var quantidadeAndamento = Model.Count(s => s.Resultado == "EmAndamento");
 }
 
-<div class="row mb-4">
+<div class="cabecalho-pagina">
+    <div>
+        <h1>@titulo</h1>
+        <p>@subtitulo</p>
+    </div>
+    <div>
+        <button class="btn btn-outline-secondary btn-sm" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise"></i> Atualizar
+        </button>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                <h6 class="text-muted">Total de Sessoes</h6>
-                <h2 class="mb-0">@Model.Count</h2>
-            </div>
+        <div class="card-estatistica">
+            <div class="rotulo">Total de Sessoes</div>
+            <div class="valor">@Model.Count</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                <h6 class="text-success">Sucesso</h6>
-                <h2 class="mb-0 text-success">@quantidadeSucesso</h2>
-            </div>
+        <div class="card-estatistica sucesso">
+            <div class="rotulo"><i class="bi bi-check-circle"></i> Sucesso</div>
+            <div class="valor">@quantidadeSucesso</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                <h6 class="text-danger">Erro</h6>
-                <h2 class="mb-0 text-danger">@quantidadeErro</h2>
-            </div>
+        <div class="card-estatistica erro">
+            <div class="rotulo"><i class="bi bi-x-circle"></i> Erro</div>
+            <div class="valor">@quantidadeErro</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                <h6 class="text-warning">Em Andamento</h6>
-                <h2 class="mb-0 text-warning">@quantidadeAndamento</h2>
-            </div>
+        <div class="card-estatistica aviso">
+            <div class="rotulo"><i class="bi bi-clock"></i> Em Andamento</div>
+            <div class="valor">@quantidadeAndamento</div>
         </div>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Sessoes de Integracao</h5>
-        <div>
-            <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">Atualizar</button>
-            <button class="btn btn-outline-danger btn-sm" onclick="resetarSandbox()">Limpar Tudo</button>
-        </div>
-    </div>
+<div class="card">
     <div class="card-body">
-        <table id="grid-sessoes" class="table table-striped table-hover" style="width:100%">
-            <thead>
-                <tr>
-                    <th>Data/Hora</th>
-                    <th>Acao</th>
-                    <th>Resultado</th>
-                    <th>Mensagem</th>
-                    <th>Reqs</th>
-                    <th>Acoes</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var sessao in Model)
-                {
-                    var classeBadge = sessao.Resultado switch
-                    {
-                        "Sucesso" => "badge-sucesso",
-                        "Erro" => "badge-erro",
-                        "EmAndamento" => "badge-emandamento",
-                        _ => "badge-incompleto"
-                    };
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size:48px;color:#d1d5db;"></i>
+                <h5 class="mt-3 text-muted">Nenhuma sessao capturada</h5>
+                <p class="text-muted small">
+                    Dispare um fluxo no Fluid apontando o ERP para
+                    <code>https://sendboxfluid.onrender.com</code>
+                </p>
+            </div>
+        }
+        else
+        {
+            <table id="grid-sessoes" class="table table-hover" style="width:100%">
+                <thead>
                     <tr>
-                        <td>@sessao.DataInicio.ToString("dd/MM/yyyy HH:mm:ss")</td>
-                        <td>@sessao.TipoAcao</td>
-                        <td><span class="badge @classeBadge">@sessao.Resultado</span></td>
-                        <td>@sessao.Mensagem</td>
-                        <td>@sessao.QuantidadeRequisicoes</td>
-                        <td>
-                            <a href="/painel/sessao/@sessao.CodigoSessao" class="btn btn-sm btn-primary">Ver detalhes</a>
-                        </td>
+                        <th>Data/Hora</th>
+                        <th>ERP</th>
+                        <th>Acao</th>
+                        <th>Resultado</th>
+                        <th>Mensagem</th>
+                        <th class="text-center">Reqs</th>
+                        <th></th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var sessao in Model)
+                    {
+                        var classeBadge = sessao.Resultado switch
+                        {
+                            "Sucesso" => "badge-sucesso",
+                            "Erro" => "badge-erro",
+                            "EmAndamento" => "badge-emandamento",
+                            _ => "badge-incompleto"
+                        };
+                        var classeErp = sessao.TipoErp switch
+                        {
+                            "SapB1" => "badge-erp-sapb1",
+                            "Sankhya" => "badge-erp-sankhya",
+                            _ => "badge-incompleto"
+                        };
+                        var nomeErp = sessao.TipoErp switch
+                        {
+                            "SapB1" => "SAP B1",
+                            "Sankhya" => "Sankhya",
+                            _ => "—"
+                        };
+                        <tr>
+                            <td><small>@sessao.DataInicio.ToString("dd/MM HH:mm:ss")</small></td>
+                            <td><span class="badge @classeErp">@nomeErp</span></td>
+                            <td>@sessao.TipoAcao</td>
+                            <td><span class="badge @classeBadge">@sessao.Resultado</span></td>
+                            <td><small class="text-muted">@sessao.Mensagem</small></td>
+                            <td class="text-center"><span class="badge badge-incompleto">@sessao.QuantidadeRequisicoes</span></td>
+                            <td class="text-end">
+                                <a href="/painel/sessao/@sessao.CodigoSessao" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> Detalhes
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     </div>
 </div>
 
 @section Scripts {
     <script>
         $(function () {
-            $("#grid-sessoes").DataTable({
-                order: [[0, 'desc']],
-                pageLength: 20,
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/2.1.8/i18n/pt-BR.json'
-                }
-            });
+            if ($("#grid-sessoes tbody tr").length > 0) {
+                $("#grid-sessoes").DataTable({
+                    order: [[0, 'desc']],
+                    pageLength: 25,
+                    language: { url: 'https://cdn.datatables.net/plug-ins/2.1.8/i18n/pt-BR.json' }
+                });
+            }
         });
-
-        function resetarSandbox() {
-            if (!confirm("Limpar TODAS as sessoes e documentos?")) return;
-            fetch('/sandbox/reset', { method: 'DELETE' })
-                .then(function () { location.reload(); });
-        }
     </script>
 }

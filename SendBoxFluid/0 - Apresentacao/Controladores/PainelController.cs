@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using SendBoxFluid.Aplicacao.Interfaces;
 using SendBoxFluid.Apresentacao.ViewModels;
+using SendBoxFluid.Dominio.Enumeradores;
 using SendBoxFluid.Dominio.Servicos;
 
 namespace SendBoxFluid.Apresentacao.Controladores;
@@ -20,20 +21,38 @@ public class PainelController : Controller
     }
 
     [HttpGet("/")]
+    public IActionResult Inicio() => RedirectToAction(nameof(Index), new { erp = "todos" });
+
     [HttpGet("/painel")]
-    public IActionResult Index()
+    [HttpGet("/painel/{erp}")]
+    public IActionResult Index(string erp = "todos")
     {
-        var sessoes = _servicoAplicacaoSessao.ListarTodas();
-        var modelo = sessoes.Select(s => new SessaoListaViewModel
+        var todasSessoes = _servicoAplicacaoSessao.ListarTodas();
+
+        // Filtra por ERP se especificado
+        var sessoesFiltradas = erp.ToLower() switch
+        {
+            "sapb1" or "sap-b1" => todasSessoes.Where(s => s.TipoErp == TipoErpEnum.SapB1),
+            "sankhya" => todasSessoes.Where(s => s.TipoErp == TipoErpEnum.Sankhya),
+            _ => todasSessoes
+        };
+
+        var modelo = sessoesFiltradas.Select(s => new SessaoListaViewModel
         {
             CodigoSessao = s.CodigoSessao,
             DataInicio = s.DataInicio,
             DataUltimaAtividade = s.DataUltimaAtividade,
             TipoAcao = ServicoIdentificadorAcao.ObterDescricao(s.TipoAcao),
+            TipoErp = s.TipoErp.ToString(),
             Resultado = s.Resultado.ToString(),
             Mensagem = s.Mensagem,
             QuantidadeRequisicoes = s.Requisicoes.Count
         }).ToList();
+
+        ViewData["ErpAtivo"] = erp.ToLower();
+        ViewData["TotalGeral"] = todasSessoes.Count;
+        ViewData["TotalSapB1"] = todasSessoes.Count(s => s.TipoErp == TipoErpEnum.SapB1);
+        ViewData["TotalSankhya"] = todasSessoes.Count(s => s.TipoErp == TipoErpEnum.Sankhya);
 
         return View(modelo);
     }
@@ -75,26 +94,22 @@ public class PainelController : Controller
     public IActionResult BaixarRelatorio(string codigoSessao)
     {
         var relatorio = _servicoAplicacaoSessao.ConstruirRelatorio(codigoSessao);
-        if (relatorio == null)
-            return NotFound();
+        if (relatorio == null) return NotFound();
 
         var conteudo = FormatarObjeto(relatorio);
         var bytes = Encoding.UTF8.GetBytes(conteudo);
-        var nomeArquivo = $"relatorio-{codigoSessao[..8]}.json";
-        return File(bytes, "application/json", nomeArquivo);
+        return File(bytes, "application/json", $"relatorio-{codigoSessao[..8]}.json");
     }
 
     [HttpGet("/painel/sessao/{codigoSessao}/download/payload")]
     public IActionResult BaixarPayload(string codigoSessao)
     {
         var sessao = _servicoAplicacaoSessao.ObterPorCodigo(codigoSessao);
-        if (sessao?.PayloadEnviadoErp == null)
-            return NotFound();
+        if (sessao?.PayloadEnviadoErp == null) return NotFound();
 
         var conteudo = FormatarJson(sessao.PayloadEnviadoErp);
         var bytes = Encoding.UTF8.GetBytes(conteudo);
-        var nomeArquivo = $"payload-{codigoSessao[..8]}.json";
-        return File(bytes, "application/json", nomeArquivo);
+        return File(bytes, "application/json", $"payload-{codigoSessao[..8]}.json");
     }
 
     private static string FormatarJson(string json)
@@ -111,12 +126,9 @@ public class PainelController : Controller
         }
     }
 
-    private static string FormatarObjeto(object obj)
+    private static string FormatarObjeto(object obj) => JsonSerializer.Serialize(obj, new JsonSerializerOptions
     {
-        return JsonSerializer.Serialize(obj, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = null
-        });
-    }
+        WriteIndented = true,
+        PropertyNamingPolicy = null
+    });
 }

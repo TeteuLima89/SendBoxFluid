@@ -13,6 +13,7 @@ public class SessaoIntegracao
     public DateTime DataUltimaAtividade { get; private set; }
     public List<RegistroRequisicao> Requisicoes { get; }
     public TipoAcaoEnum TipoAcao { get; set; }
+    public TipoErpEnum TipoErp { get; set; }
     public ResultadoIntegracaoEnum Resultado { get; set; }
     public string Mensagem { get; set; }
     public string? PayloadEnviadoErp { get; set; }
@@ -25,6 +26,7 @@ public class SessaoIntegracao
         DataUltimaAtividade = DateTime.Now;
         Requisicoes = new List<RegistroRequisicao>();
         TipoAcao = TipoAcaoEnum.Login;
+        TipoErp = TipoErpEnum.Desconhecido;
         Resultado = ResultadoIntegracaoEnum.EmAndamento;
         Mensagem = string.Empty;
     }
