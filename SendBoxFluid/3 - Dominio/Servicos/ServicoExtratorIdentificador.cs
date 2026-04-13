@@ -26,9 +26,6 @@ public static class ServicoExtratorIdentificador
         "CardCode"           // Codigo de parceiro (fallback)
     };
 
-    /// <summary>
-    /// Campos do Sankhya.
-    /// </summary>
     private static readonly string[] CamposIdentificadorSankhya = new[]
     {
         "NUNOTA",
@@ -43,38 +40,103 @@ public static class ServicoExtratorIdentificador
         if (string.IsNullOrWhiteSpace(corpoRequisicao))
             return null;
 
+        // Limpa o JSON antes de parsear - Fluid envia com whitespace
+        // e as vezes string-encoded (envolto em aspas com \r\n escapado).
+        var jsonLimpo = LimparJson(corpoRequisicao);
+        if (string.IsNullOrWhiteSpace(jsonLimpo))
+            return null;
+
         try
         {
-            using var documento = JsonDocument.Parse(corpoRequisicao);
+            using var documento = JsonDocument.Parse(jsonLimpo);
             var raiz = documento.RootElement;
 
-            // Tenta campos SAP B1
-            foreach (var campo in CamposIdentificadorSap)
+            // Se ainda assim virou string, tenta parsear o conteudo
+            if (raiz.ValueKind == JsonValueKind.String)
             {
-                var valor = ObterValorCampo(raiz, campo);
-                if (!string.IsNullOrEmpty(valor)) return valor;
-            }
-
-            // Tenta campos Sankhya (geralmente em dataSet/rootEntity)
-            var dataSet = ObterPropriedade(raiz, "serviceName") != null
-                ? ObterPropriedadeRecursiva(raiz, "PK") ?? ObterPropriedadeRecursiva(raiz, "values")
-                : raiz;
-
-            if (dataSet.HasValue)
-            {
-                foreach (var campo in CamposIdentificadorSankhya)
+                var conteudoString = raiz.GetString();
+                if (string.IsNullOrWhiteSpace(conteudoString)) return null;
+                try
                 {
-                    var valor = ObterValorCampo(dataSet.Value, campo);
-                    if (!string.IsNullOrEmpty(valor)) return valor;
+                    using var doc2 = JsonDocument.Parse(LimparJson(conteudoString));
+                    return ExtrairDoElemento(doc2.RootElement);
                 }
+                catch { return null; }
             }
 
-            return null;
+            return ExtrairDoElemento(raiz);
         }
         catch
         {
             return null;
         }
+    }
+
+    private static string? ExtrairDoElemento(JsonElement raiz)
+    {
+        // Tenta campos SAP B1
+        foreach (var campo in CamposIdentificadorSap)
+        {
+            var valor = ObterValorCampo(raiz, campo);
+            if (!string.IsNullOrEmpty(valor)) return valor;
+        }
+
+        // Tenta campos Sankhya
+        var dataSet = ObterPropriedade(raiz, "serviceName") != null
+            ? ObterPropriedadeRecursiva(raiz, "PK") ?? ObterPropriedadeRecursiva(raiz, "values")
+            : raiz;
+
+        if (dataSet.HasValue)
+        {
+            foreach (var campo in CamposIdentificadorSankhya)
+            {
+                var valor = ObterValorCampo(dataSet.Value, campo);
+                if (!string.IsNullOrEmpty(valor)) return valor;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Mesma logica do ServicoFormatadorJson - desempacota string-encoded
+    /// JSON, remove escapes literais, acha o inicio do JSON real.
+    /// </summary>
+    private static string LimparJson(string entrada)
+    {
+        var json = entrada.Trim();
+
+        if (json.StartsWith("\"") && json.EndsWith("\""))
+        {
+            try
+            {
+                var desempacotado = JsonSerializer.Deserialize<string>(json);
+                if (!string.IsNullOrWhiteSpace(desempacotado))
+                    json = desempacotado.Trim();
+            }
+            catch { }
+        }
+
+        if (json.Contains("\\r\\n") || json.Contains("\\n"))
+        {
+            json = json.Replace("\\r\\n", "\n").Replace("\\n", "\n").Replace("\\\"", "\"");
+        }
+
+        var indiceObjeto = json.IndexOf('{');
+        var indiceArray = json.IndexOf('[');
+        var indiceInicio = -1;
+
+        if (indiceObjeto >= 0 && indiceArray >= 0)
+            indiceInicio = Math.Min(indiceObjeto, indiceArray);
+        else if (indiceObjeto >= 0)
+            indiceInicio = indiceObjeto;
+        else if (indiceArray >= 0)
+            indiceInicio = indiceArray;
+
+        if (indiceInicio > 0)
+            json = json[indiceInicio..];
+
+        return json;
     }
 
     private static string? ObterValorCampo(JsonElement elemento, string nomeCampo)
