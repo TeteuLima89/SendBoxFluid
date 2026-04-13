@@ -125,19 +125,7 @@ public class PainelController : Controller
         return File(bytes, "application/json", $"payload-{codigoSessao[..8]}.json");
     }
 
-    private static string FormatarJson(string json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return string.Empty;
-        try
-        {
-            using var documento = JsonDocument.Parse(json);
-            return JsonSerializer.Serialize(documento, new JsonSerializerOptions { WriteIndented = true });
-        }
-        catch
-        {
-            return json;
-        }
-    }
+    private static string FormatarJson(string json) => ServicoFormatadorJson.Formatar(json);
 
     private static string FormatarObjeto(object obj) => JsonSerializer.Serialize(obj, new JsonSerializerOptions
     {
