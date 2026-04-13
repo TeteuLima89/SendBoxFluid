@@ -8,15 +8,18 @@ namespace SendBoxFluid.Dominio.Entidades;
 /// </summary>
 public class RegistroRequisicao
 {
-    public Guid Identificador { get; }
-    public DateTime DataHora { get; }
-    public string Metodo { get; }
-    public string Caminho { get; }
-    public string? CodigoSessao { get; }
-    public string CorpoRequisicao { get; }
-    public string CorpoResposta { get; }
-    public int CodigoStatusHttp { get; }
-    public string? Entidade { get; }
+    public Guid Identificador { get; private set; }
+    public DateTime DataHora { get; private set; }
+    public string Metodo { get; private set; } = string.Empty;
+    public string Caminho { get; private set; } = string.Empty;
+    public string? CodigoSessao { get; private set; }
+    public string CorpoRequisicao { get; private set; } = string.Empty;
+    public string CorpoResposta { get; private set; } = string.Empty;
+    public int CodigoStatusHttp { get; private set; }
+    public string? Entidade { get; private set; }
+
+    // Construtor privado para o EF Core
+    private RegistroRequisicao() { }
 
     public RegistroRequisicao(
         string metodo,

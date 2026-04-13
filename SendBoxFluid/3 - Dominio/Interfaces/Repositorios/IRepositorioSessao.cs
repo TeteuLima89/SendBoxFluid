@@ -8,4 +8,5 @@ public interface IRepositorioSessao
     SessaoIntegracao? ObterPorCodigo(string codigoSessao);
     List<SessaoIntegracao> ObterTodas();
     void Limpar();
+    void Salvar(SessaoIntegracao sessao);
 }

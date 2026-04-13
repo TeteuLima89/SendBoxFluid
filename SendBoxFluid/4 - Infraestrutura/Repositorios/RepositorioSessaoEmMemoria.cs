@@ -28,4 +28,10 @@ public class RepositorioSessaoEmMemoria : IRepositorioSessao
     }
 
     public void Limpar() => _sessoes.Clear();
+
+    public void Salvar(SessaoIntegracao sessao)
+    {
+        // No em memoria, ja esta salvo (eh referencia)
+        _sessoes[sessao.CodigoSessao] = sessao;
+    }
 }

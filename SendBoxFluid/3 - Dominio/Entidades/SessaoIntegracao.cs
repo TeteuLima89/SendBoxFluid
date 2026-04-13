@@ -4,23 +4,26 @@ using SendBoxFluid.Dominio.Servicos;
 namespace SendBoxFluid.Dominio.Entidades;
 
 /// <summary>
-/// Agrupa todas as requisicoes de UMA execucao de fluxo Fluid.
-/// Identificada pelo cookie B1SESSION retornado no Login.
+/// Cada execucao de "POST principal" do fluxo Fluid (1 NF, 1 despesa, etc).
+/// Identificada por GUID gerado no momento que o POST chega.
 /// </summary>
 public class SessaoIntegracao
 {
-    public string CodigoSessao { get; }
-    public DateTime DataInicio { get; }
+    public string CodigoSessao { get; private set; } = string.Empty;
+    public DateTime DataInicio { get; private set; }
     public DateTime DataUltimaAtividade { get; private set; }
-    public List<RegistroRequisicao> Requisicoes { get; }
+    public List<RegistroRequisicao> Requisicoes { get; private set; } = new();
     public TipoAcaoEnum TipoAcao { get; set; }
     public TipoErpEnum TipoErp { get; set; }
     public ResultadoIntegracaoEnum Resultado { get; set; }
-    public string Mensagem { get; set; }
+    public string Mensagem { get; set; } = string.Empty;
     public string? PayloadEnviadoErp { get; set; }
     public string? RespostaErp { get; set; }
     public string? IdentificadorNegocio { get; set; }
     public string? DadosOriginaisNarwal { get; set; }
+
+    // Construtor privado para o EF Core
+    private SessaoIntegracao() { }
 
     public SessaoIntegracao(string codigoSessao)
     {
