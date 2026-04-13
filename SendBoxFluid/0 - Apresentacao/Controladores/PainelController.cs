@@ -128,10 +128,9 @@ public class PainelController : Controller
             DadosOriginaisNarwal = string.IsNullOrEmpty(sessao.DadosOriginaisNarwal)
                 ? null
                 : FormatarJson(sessao.DadosOriginaisNarwal),
-            // Mostra so POSTs e PATCHs (acoes principais), oculta GETs/Login que sao ruido
+            // Mostra todas as requisicoes exceto Login (que e so autenticacao)
             Requisicoes = sessao.Requisicoes
-                .Where(r => !r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase) &&
-                            !r.Caminho.Contains("/Login", StringComparison.OrdinalIgnoreCase))
+                .Where(r => !r.Caminho.Contains("/Login", StringComparison.OrdinalIgnoreCase))
                 .Select(r => new RequisicaoViewModel
                 {
                     Identificador = r.Identificador,

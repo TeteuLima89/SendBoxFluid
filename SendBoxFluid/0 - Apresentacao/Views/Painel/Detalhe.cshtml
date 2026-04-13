@@ -8,6 +8,9 @@
         "EmAndamento" => "badge-emandamento",
         _ => "badge-incompleto"
     };
+    var temDadosNarwal = !string.IsNullOrEmpty(Model.DadosOriginaisNarwal);
+    var consultas = Model.Requisicoes.Where(r => r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase)).ToList();
+    var acoes = Model.Requisicoes.Where(r => !r.Metodo.Equals("GET", StringComparison.OrdinalIgnoreCase)).ToList();
 }
 
 <div class="cabecalho-pagina">
@@ -15,7 +18,11 @@
         <h1>@Model.TipoAcao</h1>
         <p>
             <span class="badge @classeBadge">@Model.Resultado</span>
-            <span class="text-muted ms-2">Sessao: <code>@Model.CodigoSessao</code></span>
+            @if (!string.IsNullOrEmpty(Model.IdentificadorNegocio))
+            {
+                <span class="badge-identificador ms-2"><i class="bi bi-tag"></i> @Model.IdentificadorNegocio</span>
+            }
+            <span class="text-muted ms-2 small">@Model.DataInicio.ToString("dd/MM/yyyy HH:mm:ss")</span>
         </p>
     </div>
     <div>
@@ -31,120 +38,162 @@
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-3">
-                <small class="text-muted d-block">Inicio</small>
-                <strong>@Model.DataInicio.ToString("dd/MM/yyyy HH:mm:ss")</strong>
+@if (!string.IsNullOrEmpty(Model.Mensagem))
+{
+    <div class="alert alert-light border mb-3">
+        <i class="bi bi-info-circle"></i> @Model.Mensagem
+    </div>
+}
+
+<div class="row g-3 mb-3">
+    <!-- COLUNA ESQUERDA: Origem (Narwal) -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-arrow-up-circle text-primary"></i> Origem (Narwal)
+                </h5>
+                <span class="badge badge-erp-sapb1">consulta-xml</span>
             </div>
-            <div class="col-md-3">
-                <small class="text-muted d-block">Ultima atividade</small>
-                <strong>@Model.DataUltimaAtividade.ToString("dd/MM/yyyy HH:mm:ss")</strong>
+            <div class="card-body p-0">
+                @if (temDadosNarwal)
+                {
+                    <p class="text-muted small px-3 pt-3 mb-2">
+                        Dados originais retornados pelo Narwal (mesma resposta do passo consulta-xml do fluxo)
+                    </p>
+                    <div class="json-box" style="border-radius:0 0 6px 6px; max-height:600px;">@Model.DadosOriginaisNarwal</div>
+                }
+                else
+                {
+                    <div class="alert alert-warning m-3 mb-0">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Dados Narwal nao configurados.</strong><br />
+                        <a href="/painel/configuracao" class="alert-link">Configure o acesso</a>
+                        para ver aqui os dados originais (NF, processo, despesa).
+                    </div>
+                }
             </div>
-            <div class="col-md-3">
-                <small class="text-muted d-block">Requisicoes capturadas</small>
-                <strong>@Model.Requisicoes.Count</strong>
+        </div>
+    </div>
+
+    <!-- COLUNA DIREITA: Destino (ERP) -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-arrow-down-circle text-success"></i> Destino (ERP)
+                </h5>
+                <span class="badge badge-erp-sapb1">@acoes.Count acao(es)</span>
             </div>
-            <div class="col-md-3">
-                <small class="text-muted d-block">Mensagem</small>
-                <strong>@(string.IsNullOrEmpty(Model.Mensagem) ? "—" : Model.Mensagem)</strong>
+            <div class="card-body p-0">
+                @if (acoes.Any())
+                {
+                    <p class="text-muted small px-3 pt-3 mb-2">
+                        Payload(s) enviado(s) pro ERP (Drafts, LandedCosts, JournalEntries, etc)
+                    </p>
+                    <div class="accordion accordion-flush" id="acordeao-acoes">
+                        @for (var i = 0; i < acoes.Count; i++)
+                        {
+                            var req = acoes[i];
+                            var classeStatus = req.CodigoStatusHttp >= 400 ? "text-danger" : "text-success";
+                            var corMetodo = req.Metodo switch
+                            {
+                                "POST" => "bg-success",
+                                "PATCH" => "bg-warning",
+                                "DELETE" => "bg-danger",
+                                _ => "bg-secondary"
+                            };
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button @(i > 0 ? "collapsed" : "")" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#acao-@i">
+                                        <span class="badge @corMetodo me-2">@req.Metodo</span>
+                                        <code class="me-2 small">@req.Caminho</code>
+                                        <span class="ms-auto me-3 small @classeStatus">HTTP @req.CodigoStatusHttp</span>
+                                    </button>
+                                </h2>
+                                <div id="acao-@i" class="accordion-collapse collapse @(i == 0 ? "show" : "")" data-bs-parent="#acordeao-acoes">
+                                    <div class="accordion-body p-2">
+                                        @if (!string.IsNullOrEmpty(req.CorpoRequisicao))
+                                        {
+                                            <h6 class="small mb-1"><i class="bi bi-arrow-up"></i> Enviado</h6>
+                                            <div class="json-box mb-2" style="max-height:350px; font-size:12px;">@req.CorpoRequisicao</div>
+                                        }
+                                        <h6 class="small mb-1"><i class="bi bi-arrow-down"></i> Resposta</h6>
+                                        <div class="json-box" style="max-height:200px; font-size:12px;">@req.CorpoResposta</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-light m-3 mb-0">Sem acoes registradas</div>
+                }
             </div>
         </div>
     </div>
 </div>
 
-@{
-    var temDadosNarwal = !string.IsNullOrEmpty(Model.DadosOriginaisNarwal);
-}
-<ul class="nav nav-tabs" role="tablist">
-    @if (temDadosNarwal)
-    {
-        <li class="nav-item">
-            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#aba-narwal">
-                <i class="bi bi-database"></i> Dados Originais (Narwal)
-            </button>
-        </li>
-    }
-    <li class="nav-item">
-        <button class="nav-link @(temDadosNarwal ? "" : "active")" data-bs-toggle="tab" data-bs-target="#aba-relatorio">
-            <i class="bi bi-file-earmark-text"></i> Relatorio (formato Narwal)
-        </button>
-    </li>
-    <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#aba-requisicoes">
-            <i class="bi bi-list-ul"></i> Acoes ERP (@Model.Requisicoes.Count)
-        </button>
-    </li>
-</ul>
-
-<div class="tab-content border border-top-0 bg-white p-4 rounded-bottom">
-    @if (temDadosNarwal)
-    {
-        <div class="tab-pane fade show active" id="aba-narwal">
-            <p class="text-muted small mb-3">
-                <i class="bi bi-info-circle"></i>
-                Dados originais consultados no Narwal (mesmo formato que o passo consulta-xml/processo retorna).
-                Aqui voce ve a fonte que originou o envio ao ERP.
-            </p>
-            <div class="json-box">@Model.DadosOriginaisNarwal</div>
+<!-- Linha de baixo: consultas SAP + Relatorio -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-search"></i> Consultas no ERP
+                    <span class="badge bg-secondary">@consultas.Count</span>
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                @if (consultas.Any())
+                {
+                    <p class="text-muted small px-3 pt-3 mb-2">
+                        GETs feitos no ERP pra buscar dados (PurchaseOrders, NFs anteriores, etc)
+                    </p>
+                    <div class="accordion accordion-flush" id="acordeao-consultas">
+                        @for (var i = 0; i < consultas.Count; i++)
+                        {
+                            var req = consultas[i];
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#consulta-@i">
+                                        <span class="badge bg-primary me-2">GET</span>
+                                        <code class="small">@req.Caminho</code>
+                                    </button>
+                                </h2>
+                                <div id="consulta-@i" class="accordion-collapse collapse" data-bs-parent="#acordeao-consultas">
+                                    <div class="accordion-body p-2">
+                                        <div class="json-box" style="max-height:250px; font-size:12px;">@req.CorpoResposta</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-light m-3 mb-0 small">Sem consultas neste fluxo</div>
+                }
+            </div>
         </div>
-    }
-    <div class="tab-pane fade @(temDadosNarwal ? "" : "show active")" id="aba-relatorio">
-        <p class="text-muted small mb-3">
-            <i class="bi bi-info-circle"></i>
-            JSON exatamente como seria enviado pro Narwal via /api/eventointegracao/v1/retornointegracao
-        </p>
-        <div class="json-box">@Model.JsonRelatorio</div>
     </div>
 
-    @if (!temDadosNarwal)
-    {
-        <div class="alert alert-info mt-3 mb-0">
-            <i class="bi bi-info-circle"></i>
-            <strong>Dados do Narwal nao disponiveis.</strong>
-            Configure o acesso em <a href="/painel/configuracao" class="alert-link">Configuracao</a>
-            pra ver os dados originais (consulta-xml) aqui.
-        </div>
-    }
-
-    <div class="tab-pane fade" id="aba-requisicoes">
-        <div class="accordion" id="acordeao-reqs">
-            @for (var i = 0; i < Model.Requisicoes.Count; i++)
-            {
-                var req = Model.Requisicoes[i];
-                var classeStatus = req.CodigoStatusHttp >= 400 ? "text-danger" : "text-success";
-                var corMetodo = req.Metodo switch
-                {
-                    "POST" => "bg-success",
-                    "GET" => "bg-primary",
-                    "PATCH" => "bg-warning",
-                    "DELETE" => "bg-danger",
-                    _ => "bg-secondary"
-                };
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button"
-                                data-bs-toggle="collapse" data-bs-target="#req-@i">
-                            <span class="badge @corMetodo me-2">@req.Metodo</span>
-                            <code class="me-3">@req.Caminho</code>
-                            <span class="ms-auto me-3 @classeStatus">HTTP @req.CodigoStatusHttp</span>
-                            <small class="text-muted">@req.DataHora.ToString("HH:mm:ss")</small>
-                        </button>
-                    </h2>
-                    <div id="req-@i" class="accordion-collapse collapse" data-bs-parent="#acordeao-reqs">
-                        <div class="accordion-body">
-                            @if (!string.IsNullOrEmpty(req.CorpoRequisicao))
-                            {
-                                <h6 class="mb-2"><i class="bi bi-arrow-up-circle"></i> Requisicao</h6>
-                                <div class="json-box mb-3">@req.CorpoRequisicao</div>
-                            }
-                            <h6 class="mb-2"><i class="bi bi-arrow-down-circle"></i> Resposta</h6>
-                            <div class="json-box">@req.CorpoResposta</div>
-                        </div>
-                    </div>
-                </div>
-            }
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-text"></i> Relatorio (formato Narwal)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <p class="text-muted small px-3 pt-3 mb-2">
+                    JSON exatamente como seria enviado pro Narwal via /api/eventointegracao/v1/retornointegracao
+                </p>
+                <div class="json-box" style="border-radius:0 0 6px 6px; max-height:400px;">@Model.JsonRelatorio</div>
+            </div>
         </div>
     </div>
 </div>
