@@ -48,13 +48,24 @@ public class B1sController : ControllerBase
 
         _registradorEventos.LogInformation("POST /b1s/v1/{Entidade} -> DocEntry={CodigoEntrada}", entidade, codigoEntrada);
 
+        // Estrutura "error" sempre presente (vazia quando sucesso) para evitar
+        // nil pointer no template Go do passo "retornoerro" do Fluid.
+        // O template faz: index .steps.envia-nota-fiscal.body.error.message.value
+        // Se nao existir, quebra com "index of nil pointer".
+        var erroVazio = new
+        {
+            code = 0,
+            message = new { value = "", lang = "pt-BR" }
+        };
+
         if (entidade.Equals("JournalEntries", StringComparison.OrdinalIgnoreCase))
         {
             return Created($"/b1s/v1/{entidade}({codigoEntrada})", new
             {
                 JdtNum = codigoEntrada,
                 DocEntry = codigoEntrada,
-                DocNum = codigoEntrada
+                DocNum = codigoEntrada,
+                error = erroVazio
             });
         }
 
@@ -63,7 +74,8 @@ public class B1sController : ControllerBase
             DocEntry = codigoEntrada,
             DocNum = codigoEntrada,
             DocTotal = 0,
-            DocTotalFc = 0
+            DocTotalFc = 0,
+            error = erroVazio
         });
     }
 
