@@ -20,5 +20,8 @@ public enum TipoAcaoEnum
     ConsultaPedidoVenda = 11,
     ConsultaNotaFiscal = 12,
     Cancelamento = 13,
-    Atualizacao = 14
+    Atualizacao = 14,
+    PedidoVenda = 15,
+    PedidoCompra = 16,
+    TransferenciaEstoque = 17
 }

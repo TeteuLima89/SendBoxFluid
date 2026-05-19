@@ -116,8 +116,11 @@ public class MiddlewareCapturaRequisicao
             !registro.Metodo.Equals("PATCH", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        // Login nao eh POST principal
+        // Login e Logout nao sao POST principal
         if (registro.Caminho.Contains("/Login", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (registro.Caminho.Contains("/Logout", StringComparison.OrdinalIgnoreCase))
             return false;
 
         // Sankhya: Login via serviceName

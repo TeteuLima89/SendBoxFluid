@@ -147,10 +147,29 @@
     <script>
         $(function () {
             if ($("#grid-sessoes tbody tr").length > 0) {
-                $("#grid-sessoes").DataTable({
+                var table = $("#grid-sessoes").DataTable({
                     order: [[0, 'desc']],
                     pageLength: 25,
-                    language: { url: 'https://cdn.datatables.net/plug-ins/2.1.8/i18n/pt-BR.json' }
+                    language: {
+                        url: 'https://cdn.datatables.net/plug-ins/2.1.8/i18n/pt-BR.json',
+                        searchPlaceholder: 'Buscar por identificador...'
+                    },
+                    initComplete: function () {
+                        var api = this.api();
+                        var divFiltro = $('<div class="d-flex align-items-center gap-2 mb-3"></div>');
+                        var label = $('<label class="text-muted small mb-0">Filtrar resultado:</label>');
+                        var select = $('<select class="form-select form-select-sm" style="width:auto"></select>')
+                            .append('<option value="">Todos</option>')
+                            .append('<option value="Sucesso">Sucesso</option>')
+                            .append('<option value="Erro">Erro</option>')
+                            .append('<option value="EmAndamento">Em Andamento</option>')
+                            .append('<option value="Incompleto">Incompleto</option>')
+                            .on('change', function () {
+                                api.column(4).search($(this).val()).draw();
+                            });
+                        divFiltro.append(label).append(select);
+                        $(api.table().container()).prepend(divFiltro);
+                    }
                 });
             }
         });

@@ -94,7 +94,8 @@ public class ServicoGeradorDocumento
 
     private static void AdicionarCamposEspecificosEntidade(JsonObject documento, string entidade)
     {
-        if (entidade.Equals("PurchaseInvoices", StringComparison.OrdinalIgnoreCase))
+        if (entidade.Equals("PurchaseInvoices", StringComparison.OrdinalIgnoreCase) ||
+            entidade.Equals("Invoices", StringComparison.OrdinalIgnoreCase))
         {
             documento["SequenceCode"] = -2;
             documento["SequenceSerial"] = 1;
@@ -107,6 +108,22 @@ public class ServicoGeradorDocumento
             documento["JournalMemo"] = "Auto-generated";
             documento["PayToCode"] = "";
             documento["ShippingMethod"] = 1;
+        }
+        else if (entidade.Equals("PurchaseOrders", StringComparison.OrdinalIgnoreCase))
+        {
+            documento["NumAtCard"] = "";
+            documento["CardCode"] = "SANDBOX_AUTO";
+            documento["PaymentGroupCode"] = -1;
+            documento["DocObjectCode"] = "22";
+        }
+        else if (entidade.Equals("StockTransfers", StringComparison.OrdinalIgnoreCase))
+        {
+            documento["FromWarehouse"] = "01";
+            documento["ToWarehouse"] = "02";
+            documento["DocObjectCode"] = "67";
+            var linhasJson = documento["DocumentLines"]?.ToJsonString();
+            if (linhasJson != null)
+                documento["StockTransferLines"] = System.Text.Json.Nodes.JsonNode.Parse(linhasJson);
         }
     }
 }
