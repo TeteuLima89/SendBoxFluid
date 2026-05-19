@@ -100,12 +100,17 @@ public class MiddlewareCapturaRequisicao
 
         if (ehPostPrincipal)
         {
-            // Cria NOVA sessao (cada NF/Transito/Reintegracao eh independente)
             FinalizarComoNovaSessao(codigoCookie, registro, contexto.Request.Path, repositorioSessao);
+        }
+        else if (registro.Caminho.Contains("/Login", StringComparison.OrdinalIgnoreCase))
+        {
+            // Login cria a sessao imediatamente como EmAndamento — aparece no painel
+            // mesmo que o flow nao encontre pendentes e nao chegue ao POST principal
+            IniciarSessaoLogin(codigoCookie, registro, contexto.Request.Path, repositorioSessao);
         }
         else
         {
-            // Login ou GET - bufferiza pra associar ao proximo POST principal
+            // GET ou Logout - bufferiza pra associar ao proximo POST principal
             BufferizarRequisicao(codigoCookie, registro);
         }
     }
@@ -142,15 +147,29 @@ public class MiddlewareCapturaRequisicao
         }
     }
 
+    private static void IniciarSessaoLogin(
+        string codigoCookie,
+        RegistroRequisicao loginReq,
+        PathString caminho,
+        IRepositorioSessao repositorioSessao)
+    {
+        var sessao = repositorioSessao.ObterOuCriar(codigoCookie);
+        sessao.AdicionarRequisicao(loginReq);
+        sessao.TipoErp = IdentificarErp(caminho);
+        sessao.TipoAcao = TipoAcaoEnum.Login;
+        sessao.Resultado = ResultadoIntegracaoEnum.EmAndamento;
+        sessao.Mensagem = "Autenticacao realizada — sem pendentes ou flow ainda em execucao";
+        repositorioSessao.Salvar(sessao);
+    }
+
     private static void FinalizarComoNovaSessao(
         string codigoCookie,
         RegistroRequisicao postPrincipal,
         PathString caminho,
         IRepositorioSessao repositorioSessao)
     {
-        // Codigo unico pra essa integracao (nao mais o cookie compartilhado)
-        var codigoIntegracao = Guid.NewGuid().ToString();
-        var sessao = repositorioSessao.ObterOuCriar(codigoIntegracao);
+        // Reutiliza a sessao criada no Login (mesmo B1SESSION = mesma execucao do flow)
+        var sessao = repositorioSessao.ObterOuCriar(codigoCookie);
 
         // Pega buffer atual e move pra essa sessao
         if (_bufferPorCookie.TryGetValue(codigoCookie, out var buffer))
